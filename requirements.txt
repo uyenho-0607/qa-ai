@@ -1,0 +1,12 @@
+# ─── Jira ───────────────────────────────────────────────────────────────────
+# Used by: jira-handler scripts (jira_common.py → from jira import JIRA)
+jira==3.10.5
+
+# ─── Google Sheets ──────────────────────────────────────────────────────────
+# Used by: collect-gsheet-cases (fetch_gsheet_tcs.py → import requests)
+# Note: uses raw HTTP to Sheets API — no gspread needed
+requests==2.32.3
+
+# ─── Utilities ──────────────────────────────────────────────────────────────
+# Used by: collect-gsheet-cases (fetch_gsheet_tcs.py → from dotenv import load_dotenv)
+python-dotenv==1.0.1

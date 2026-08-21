@@ -5,7 +5,7 @@ inclusion: always
 # Project Configuration
 
 ## Auto-Active Skills
-**MANDATORY** Activate at session start: `disclose_context("confirm-force")`, `disclose_context("skill-follow")`
+**MANDATORY** Activate at session start: `Read .claude/skills/confirm-force/SKILL.md`, `Read .claude/skills/skill-follow/SKILL.md`
 
 ## Environment
 
@@ -35,9 +35,9 @@ inclusion: always
 | `tasks/{KEY}/tc-review.md` | TC review report — coverage, oracle, repro, form |
 | `evidence/{KEY}/` | Bug evidence screenshots/videos — gitignored |
 | `reports/{KEY}/` | Coverage reports — commit if tracking history |
-| `.kiro/domain/` | App knowledge base — modules, URLs, UI rules |
+| `.claude/domain/` | App knowledge base — modules, URLs, UI rules |
 
 ## Tools
 GitLab project id: `<FILL_IN>`
 Jira site: `<FILL_IN>.atlassian.net` | `cloudId`: `<FILL_IN>` | project id: `<FILL_IN>`
-Jira constants and transitions: see `.kiro/steering/jira.md`
+Jira constants and transitions: see `.claude/steering/jira.md`

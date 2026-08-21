@@ -38,7 +38,7 @@ If a call fails: note `⚠️ [KEY]: Could not retrieve — [reason]` and contin
 If any attachment has `mimeType: image/*`, run:
 
 ```bash
-bash .kiro/skills/jira-retriever/download-jira-attachments.sh <ISSUE-KEY>
+bash .claude/skills/jira-retriever/download-jira-attachments.sh <ISSUE-KEY>
 ```
 
 Saves to `tasks/<ISSUE-KEY>/attachments/`.

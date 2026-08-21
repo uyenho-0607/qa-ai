@@ -22,10 +22,10 @@ description: Review a set of test cases for coverage gaps, weak oracles, non-rep
 
 **1.1 TCs.**
 
-- `{KEY}` given → read `tasks/{KEY}/manual-tcs.md`. Missing → `disclose_context("collect-testmo-cases")` with `{KEY}`, `save`, `no-gate`, then read `tasks/{KEY}/tc.md`.
+- `{KEY}` given → read `tasks/{KEY}/manual-tcs.md`. Missing → `Read .claude/skills/collect-testmo-cases/SKILL.md` with `{KEY}`, `save`, `no-gate`, then read `tasks/{KEY}/tc.md`.
 - Sheet URL given → read via `mcp_google_docs_readspreadsheet`, columns per `tc-conventions.md` § Order Export Columns. Parse every row into a TC; skip the header and empty rows.
 
-**1.2 Scope.** Coverage is graded against the requirements, so load them: `tasks/{KEY}/tc-plan.md` if it exists, else `tasks/{KEY}/jira.md`, else `disclose_context("jira-retriever")` for `{KEY}` with `save`. Number them `AC-n`, `BR-n`, `ERR-n` as in `generate-tcs` Phase 1.
+**1.2 Scope.** Coverage is graded against the requirements, so load them: `tasks/{KEY}/tc-plan.md` if it exists, else `tasks/{KEY}/jira.md`, else `Read .claude/skills/jira-retriever/SKILL.md` for `{KEY}` with `save`. Number them `AC-n`, `BR-n`, `ERR-n` as in `generate-tcs` Phase 1.
 
 No scope source available → ask once for the ticket key. Declined → grade the other three dimensions and report `Coverage: not checked — no scope source`.
 
