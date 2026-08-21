@@ -7,14 +7,14 @@ description: Map business behaviour of a live web application — workflows, val
 
 Outputs: **Checkpoint Map** (where values appear) + **flow file** (behaviour, validation, transitions).
 
-Rules: `.kiro/steering/playwright-rule.md`, `.kiro/skills/ui-discovery/rules.md`, `.kiro/steering/reasoning-standards.md`, `.kiro/steering/deliverable-reporting.md`
+Rules: `.kiro/steering/playwright-rule.md`, `.kiro/skills/ui-discovery/rules.md`, `.kiro/steering/reasoning-standards.md`
 
 ## Hard Rule
 **Every phase is mandatory. No phase may be skipped, shortened, or rationalized away.** Even if POM exists or pages seem familiar — always discover live state.
 
 ## Inputs
 - Target feature/capability
-- Target apps: OMS Admin / EMS Trader / EMS Backoffice
+- Target app: OTC Back Office (`BO_URL`) — roles: Maker / Checker / Admin
 - Flow file path (default: `.kiro/domain/flows.md`)
 - Read `project-config.md` for URLs/credentials
 
@@ -58,4 +58,20 @@ Verify same value across all apps. Flag inconsistencies.
    ## Locators
    ```
 3. **Locator cache** — update `.kiro/locator-cache.json`
-4. **Confidence Report** — dimensions: page coverage, checkpoint map, validation rules, permission mapping, cross-app consistency
+4. **Confidence Report** — one row per dimension:
+
+   ```
+   Discovery — {Feature}    [n] pages · [n] checkpoints · [n] validation rules
+
+   | Dimension | Observed | Confidence | Gap |
+   |---|---|---|---|
+   | Page coverage | [n]/[n] pages from Phase 1 explored | high/med/low | [what was not reached] |
+   | Checkpoint map | [n] values across [n] locations | | |
+   | Validation rules | [n] rules observed live | | |
+   | Permission mapping | [n]/[n] roles exercised | | |
+   | Cross-app consistency | [n] values compared, [n] mismatches | | |
+   ```
+
+   Confidence is `high` only where every row came from a live observation. Anything inferred from a label, a requirement, or a previous session is `low` — name it in Gap.
+
+   `.kiro/domain/flows.md` and `.kiro/locator-cache.json` do not exist until this phase writes them; create them rather than reporting them missing.

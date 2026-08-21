@@ -11,8 +11,11 @@ Execution skill for Jira write operations. Called by `report-bug`, `verify-bug`,
 
 ## Config
 
-Read `.claude/steering/jira.md` before the first write call — project ids, transitions, dev team.
-Read #[[file:dev-team.md]] for dev-team account IDs.
+Extract Jira constants before the first write call:
+```bash
+awk '/^## /{p = /Rovo MCP|Project Rules|Transitions/} p' .claude/steering/jira.md
+```
+Read `.claude/skills/jira-handler/dev-team.md` for dev-team account IDs.
 
 ---
 
@@ -27,14 +30,14 @@ Read #[[file:dev-team.md]] for dev-team account IDs.
 | `jira_desc_update.py --issue {KEY} --file {path} --filename {name} --adf-file {path}` | Upload + set description (atomic) |
 | `jira_desc_update.py --get-media-uuid {IDs}` | Resolve attachment IDs → UUIDs (helper) |
 
-All at `.claude/skills/jira-handler/`. Prefix with `{PYTHON}`.
+All at `.claude/skills/jira-handler/`. Prefix with `python3`.
 
 ### Multiple Files Syntax
 
 For multiple files, **repeat the flags** (not comma/space-separated):
 
 ```bash
-{PYTHON} .claude/skills/jira-handler/jira_comment.py \
+.venv/bin/python3 .claude/skills/jira-handler/jira_comment.py \
   --issue OMS-XXX \
   --file path/to/file1.png --file path/to/file2.png \
   --filename "display1.png" --filename "display2.png" \
@@ -50,7 +53,7 @@ For multiple files, **repeat the flags** (not comma/space-separated):
 
 1. `createJiraIssue` — type `SIT Bug`, parent, assignee, `additional_fields: {"priority": {"name": "Medium"}}`
 2. Write temp ADF JSON with `{MEDIA_1}` placeholders (⛔ READ `.claude/skills/jira-handler/adf-templates.md`)
-3. `{PYTHON} .claude/skills/jira-handler/jira_desc_update.py --issue {KEY} --file {path} --filename {name} --adf-file {adf_path}`
+3. `.venv/bin/python3 .claude/skills/jira-handler/jira_desc_update.py --issue {KEY} --file {path} --filename {name} --adf-file {adf_path}`
    — uploads file, substitutes `{MEDIA_1}` with UUID, updates description in one call
    — multiple files: repeat `--file`/`--filename` pairs; placeholders fill in order `{MEDIA_1}`, `{MEDIA_2}`…
 
@@ -59,7 +62,7 @@ For multiple files, **repeat the flags** (not comma/space-separated):
 ## Action: post_verification
 
 ```bash
-{PYTHON} .claude/skills/jira-handler/jira_comment.py --issue {KEY} --file {path} --filename {name} --comment $'{emoji} Verified {verdict} — {ENVIRONMENT}\n\n**Result:**\n{result_text}'
+.venv/bin/python3 .claude/skills/jira-handler/jira_comment.py --issue {KEY} --file {path} --filename {name} --comment $'{emoji} Verified {verdict} — {ENVIRONMENT}\n\n**Result:**\n{result_text}'
 ```
 
 - `✅ Verified FIXED` or `❌ Verified NOT FIXED`
@@ -76,7 +79,6 @@ For multiple files, **repeat the flags** (not comma/space-separated):
 
 ## Hard Rules
 
-- ALWAYS `{PYTHON}` — never bare `python`
 - ALWAYS `$'...\n...'` for multiline — never `"...\n..."`
 - NEVER `jira_comment.py` for bug creation (posts unwanted comment)
 - NEVER create bug without evidence

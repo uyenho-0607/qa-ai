@@ -4,32 +4,20 @@
 **Source:** Google Sheet
 **Total:** {N} cases
 
-## Summary
-
-| Classification | Count |
-|---|---|
-| ✅ Automatable | N |
-| ❌ Manual only | N |
-| 🚧 In Progress | N |
-
-| Priority | Count |
-|---|---|
-| High | N |
-| Medium | N |
-| Low | N |
-
 ---
 
 ## Full Case Details
 
 #### {TC-ID} — {name}
 - **Module:** {module}
+- **Scenario:** {scenario}
 - **Type:** {type}
 - **Priority:** {priority}
 - **Automation:** {automation}
 - **Classification:** {Automatable | Manual — reason}
 - **Pre-requisites:** {prerequisites}
 - **Test Data:** {test_data}
+- **Requirement Ref:** {requirement_ref}
 
 **Steps:**
 {steps}

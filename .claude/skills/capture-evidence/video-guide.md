@@ -1,8 +1,6 @@
 # Video Guide — Two-Browser Recording
 
-## Why two browsers?
-
-First browser = already open from exploration. Second browser = clean recording context. Everything was already confirmed, so the recording is smooth.
+## Viewport — see screenshot-guide.md §Viewport Setup
 
 ---
 
@@ -37,6 +35,7 @@ if (Object.keys(sessionData).length > 0) {
 
 ```js
 async (page) => {
+  // Viewport — build vw/vh per screenshot-guide.md §Viewport Setup
   const { width, height } = await page.evaluate(() => ({
     width: window.screen.width, height: window.screen.height
   }));

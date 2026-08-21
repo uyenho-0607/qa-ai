@@ -104,16 +104,9 @@ Rules:
 
 ```js
 async (page) => {
-  // 1. Viewport
-  const { width, height } = await page.evaluate(() => ({
-    width: window.screen.width, height: window.screen.height
-  }));
-  await page.setViewportSize({ width: width >= 1280 ? width : 2560, height: height >= 720 ? height : 1440 });
-
-  // 2. Scroll to target (if off-screen)
-
-  // 3. Annotate (see overlay template above)
-
+  // 1. Viewport  — see §Viewport Setup
+  // 2. Scroll    — see §Scrolling
+  // 3. Annotate  — see §Annotation Label Overlay
   // 4. Screenshot
   await page.screenshot({ path: './OMS-950_bug_1.png', type: 'png', scale: 'device' });
 }

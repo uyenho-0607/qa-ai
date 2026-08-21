@@ -1,7 +1,3 @@
----
-inclusion: manual
----
-
 # Testmo — Reference Data
 
 Project-specific constants and reference data for Testmo operations.
@@ -20,6 +16,18 @@ Project-specific constants and reference data for Testmo operations.
 - 45: Android app
 - 46: iOS app
 
+## Case Field IDs
+
+Values for `testmo_create_cases` / `testmo_update_cases` custom fields.
+
+**Priority (`custom_priority`):**
+- 54: High
+- 55: Medium
+- 56: Low
+
+**State (`state_id`):**
+- 2: Pending Review
+
 ## Jira Issue Connections (for linking cases)
 
 All use `integration_id: 1` (AQX - Jira).
@@ -35,18 +43,6 @@ All use `integration_id: 1` (AQX - Jira).
 - 10034: AQR BrokerBox
 - 10024: Full Suite Product
 - 10494: Engineering
-
-## Users
-
-- 7: Camcam — thicam.truong@aquariux.com
-- 8: Dat — lethanhdat.nguyen@aquariux.com
-- 9: Mai — thihuyen.mai@aquariux.com
-- 10: Nguyen — nguyenle.nguyen@aquariux.com
-- 11: Nam Phuong — ngocnamphuong.truong@aquariux.com
-- 12: Alice — ngocloananh.le@aquariux.com
-- 13: Lâm (Derrick) — truonghunglam.nguyen@aquariux.com
-- 14: Kriss — ngocnguyen.pham@aquariux.com
-- 15: Thuy Trang — thuythuytrang.vong@aquariux.com
 
 ## Deep-Link URL Formats
 

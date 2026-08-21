@@ -47,5 +47,5 @@ Structure checklist:
   [ ] Headings name the action governed, not the topic
   [ ] No weasel words (should, try, consider)
   [ ] No duplicates of existing steering rules
-  [ ] No contradictions with general-conventions.md, pom-conventions.md, test-file-conventions.md
+  [ ] No contradictions with any existing file in .claude/steering/
 -->

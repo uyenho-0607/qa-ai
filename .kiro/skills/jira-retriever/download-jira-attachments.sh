@@ -88,6 +88,29 @@ if [[ ${#VIDEO_FILES[@]} -gt 0 ]]; then
   fi
 fi
 
+# ── Cross-reference attachments to comments ─────────────────────────────────
+echo ""
+echo "Cross-referencing attachments with comments..."
+
+COMMENT_MAP=$(curl -s \
+  -H "Authorization: Basic ${AUTH}" \
+  -H "Accept: application/json" \
+  "https://${SITE}/rest/api/3/issue/${ISSUE_KEY}?fields=attachment,comment" \
+  | python3 "$(dirname "$0")/comment_map.py")
+
+INDEX_FILE="${OUT_DIR}/comment-images.txt"
+echo "# Attachment → Comment cross-reference for ${ISSUE_KEY}" > "$INDEX_FILE"
+echo "# Generated: $(date)" >> "$INDEX_FILE"
+echo "" >> "$INDEX_FILE"
+while IFS='|' read -r filename source author date excerpt; do
+  echo "${filename}" >> "$INDEX_FILE"
+  echo "  ${source} ${author} ${date}" >> "$INDEX_FILE"
+  [[ -n "${excerpt}" ]] && echo "  ${excerpt}" >> "$INDEX_FILE"
+  echo "" >> "$INDEX_FILE"
+done <<< "$COMMENT_MAP"
+
+echo "  ✓ comment-images.txt written → ${INDEX_FILE}"
+
 echo ""
 echo "Done. Files in: ${OUT_DIR}/"
 ls -lh "$OUT_DIR/"

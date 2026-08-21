@@ -1,31 +1,26 @@
----
-inclusion: manual
----
-
 # Jira — Reference Data
 
 Project-specific constants and rules for Jira operations.
 
 ## Rovo MCP
 
-| Field | Value |
-|---|---|
-| Site | `<FILL_IN>.atlassian.net` |
-| `cloudId` | `<FILL_IN>` |
-| Project id | `<FILL_IN>` (key `<PROJECT_KEY>`) |
-| `SIT Bug` issue type id | `<FILL_IN>` (subtask) |
+- Site — `aquariux.atlassian.net`
+- `cloudId` — `12682e49-4a34-4c8d-a5be-1131ec1b93cc`
+- Project id — `10263` (key `AO`, name `AQXPAY-OTC`)
+- `SIT Bug` issue type id — `10017` (subtask)
+- `QA Preparation` issue type id — `10632` (subtask) — where TC review feedback is left
+- `QA Execution` issue type id — `10633` (subtask)
 
 ## Project Rules
 
-- Target project id from above; never resolve the project by search.
-- Read project key in ticket titles as the tenant name when it differs from the Jira project key.
+- Target project id `10263`; never resolve the project by search.
+- Project key is `AO` — issue keys follow the format `AO-NNN`.
 
 ## Transitions
 
-Start Test `<id>` | Pass SIT `<id>` | Reopen `<id>` | Not Required `<id>` | Start Fix `<id>`.
+Reopen `81` | Not Required `71` | Start Fix `11` | SIT in Progress `41` | Pass SIT `51`.
 For any other transition, call `getTransitionsForJiraIssue` and use the id it returns.
 
 ## Bug Assignment
 
-FE → `<names>` | BE → `<names>`
 Names and account IDs: `.claude/skills/jira-handler/dev-team.md`.

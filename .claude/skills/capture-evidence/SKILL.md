@@ -60,12 +60,9 @@ filenames: ["OMS-950_bug_1.png"]
 7. Report paths
 
 ## Hard Rules
-- ONLY use `browser_navigate` + `browser_run_code_unsafe`
-- Never use individual MCP tools (browser_click, etc.)
 - Never annotate behind overlay
 - Never re-explore DOM — use passed selectors
 - Never auto-delete — wait for confirmation
 - Always `scale: 'device'` on screenshots
 - Always scroll BEFORE annotate
-- Always close recording context in `finally`
 - For EMS: transfer storageState AND sessionStorage

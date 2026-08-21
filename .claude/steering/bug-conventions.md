@@ -1,7 +1,3 @@
----
-inclusion: manual
----
-
 # Bug Conventions
 
 ## Title Format

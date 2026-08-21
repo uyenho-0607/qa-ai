@@ -1,7 +1,3 @@
----
-inclusion: manual
----
-
 # Reasoning Standards
 
 How to verify and state claims. Applies to every response.

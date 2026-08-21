@@ -4,7 +4,7 @@ inclusion: manual
 
 # Playwright MCP — Interaction Rules
 
-Project variables (`BASE_URL`, `AUTH_PATH`, `CHROME_PROFILE`, etc.) are in `project-config.md`.
+Project URL and credentials (`BO_URL`, `BO_MAKER`, `BO_CHECKER`, `BO_ADMIN`, `SHARED_PASSWORD`) are in `project-config.md`. `BO_URL` requires VPN.
 
 ---
 
@@ -13,15 +13,6 @@ Project variables (`BASE_URL`, `AUTH_PATH`, `CHROME_PROFILE`, etc.) are in `proj
 **Use `browser_run_code_unsafe` for all browser interactions.** Never use `browser_snapshot`, `browser_click`, `browser_type`, or other individual MCP tools — they are unreliable on SPAs.
 
 **One exception:** use `browser_navigate` as the first call of every browser task to handle dead sessions (auto-creates a new page if the previous one closed). Within the same session, skip it and use `page.goto()` inside `run_code_unsafe`.
-
----
-
-## Session Pattern
-
-```
-call 1: browser_navigate → target URL
-call 2: browser_run_code_unsafe → everything else (interact + read + screenshot)
-```
 
 Never close the browser between tasks in the same session.
 
@@ -43,7 +34,7 @@ Never close the browser between tasks in the same session.
 **Always read the DOM before interacting.** Never guess locators.
 
 Before any click or fill:
-1. Check `locator-cache.json` for cached selectors — use them directly
+1. If `.kiro/locator-cache.json` exists, check it for cached selectors — use them directly
 2. If not cached: `page.evaluate(() => [...document.querySelectorAll('[data-testid]')].map(e => e.dataset.testid))` to scan
 3. Use the discovered selector with `{ timeout: 3000 }`
 

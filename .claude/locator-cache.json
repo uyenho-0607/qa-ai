@@ -1,0 +1,67 @@
+{
+  "_note": "Selectors verified live on OTC BO SIT. The app exposes NO data-testid attributes \u2014 every locator below is role+name, CSS, or attribute-based.",
+  "_verified": "2026-08-26",
+  "otc-bo": {
+    "login": {
+      "email": "#email",
+      "password": "#password",
+      "submit": "button[type=submit]"
+    },
+    "nav": {
+      "members": "a[href='/members']",
+      "balanceApprovals": "a[href='/approval/balance']",
+      "otcApprovals": "a[href='/approval/otc']",
+      "unidentified": "a[href='/approval/unidentified']",
+      "transactions": "a[href='/transaction']",
+      "actionRequiredToggle": "text=Action Required"
+    },
+    "membersList": {
+      "table": "table",
+      "rowByEmail": "tr[data-row-key='{email}']",
+      "rowRole": "tr[role=button][aria-label^='View details for']"
+    },
+    "memberDetails": {
+      "urlPattern": "/members/details?memberId={id}&tab={tab}&subTab={subTab}",
+      "tabOverview": "#rc-tabs-0-tab-overview",
+      "tabVerification": "#rc-tabs-0-tab-verification",
+      "tabWithdrawalAccounts": "#rc-tabs-0-tab-withdrawal-accounts",
+      "tabRecentActions": "#rc-tabs-0-tab-recent-actions",
+      "_tabNote": "rc-tabs-0 prefix is generated; prefer getByRole('tab', { name: 'Withdrawal Accounts' })"
+    },
+    "withdrawalAccounts": {
+      "subTabBankAccounts": "role=tab[name='Bank Accounts']",
+      "subTabCryptoAddresses": "role=tab[name='Crypto Addresses']",
+      "_subTabNote": "These are BUTTONs with role=tab inside 'flex items-center gap-0 border-none w-fit rounded-lg bg-gray-200 p-0.5' \u2014 a toggle pair, NOT stacked sections",
+      "tableHeaders": "table th",
+      "emptyState": "span.text-sm.text-gray-500",
+      "rows": "table tbody tr",
+      "columnSorter": "table th .ant-table-column-sorter",
+      "_cryptoSortNote": "Only 'Created Date' is user-sortable on the Crypto Addresses table."
+    },
+    "balanceApprovals": {
+      "url": "/approval/balance",
+      "table": "table",
+      "rowViewDetails": "button[aria-label='View details']",
+      "rowByType": "table tbody tr:has-text('{type}')",
+      "drawer": ".ant-drawer",
+      "drawerClose": "button[aria-label='Close drawer']",
+      "approve": "button:has-text('Approve')",
+      "reject": "button:has-text('Reject')",
+      "copyValue": "button[aria-label='Copy value']",
+      "_note": "Ant Design drawer titled 'Balance Details'. Approve/Reject both enabled on a Pending request. Existing Pending withdrawals have toAddress=null (Destination Address '-') so they are not linked to a saved destination record."
+    }
+  },
+  "api": {
+    "base": "/api/backoffice/backend",
+    "authHeader": "Authorization: Bearer <localStorage.accessToken, JSON.parse'd>",
+    "bankAccountsByMember": "/api/backoffice/backend/bank-account/member/{memberId}",
+    "cryptoAddressesByMember": "/api/backoffice/backend/crypto-address/member/{memberId}",
+    "memberList": "/api/backoffice/backend/member?pageNum=1&pageSize=500",
+    "responseShape": "{ code, result: { list: [], total, pageNum, pageSize, ... } }",
+    "userMe": "/api/backoffice/backend/user/me",
+    "memberApplicant": "/api/backoffice/backend/identification/applicant/{memberId}",
+    "balanceApproval": "/api/report/backend/balance/approval/{txnId}",
+    "_profileIdNote": "bank-account/crypto-address endpoints take result.profileId from identification/applicant/{memberId}, NOT the memberId in the page URL.",
+    "_privilegeNote": "user/me returns result.privileges. MEMBER_BANK_ACCOUNT_UPDATE and MEMBER_CRYPTO_ADDRESS_UPDATE are held by maiadmin@, maimaker@ and maichecker@ alike; all three report businessRoleCode ADMIN."
+  }
+}

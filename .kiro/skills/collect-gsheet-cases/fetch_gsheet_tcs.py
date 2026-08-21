@@ -1,11 +1,16 @@
 """Fetch test cases from a Google Sheet and save as a structured markdown file.
 
-Reads a sheet tab named TC-{issue-key} from the given spreadsheet, merges
-continuation rows, and writes `tasks/{issue-key}/tc.md`.
+Reads a sheet tab named {issue-key} (or TC-{issue-key} as fallback) from the
+given spreadsheet, merges continuation rows (one row per step), and writes
+`tasks/{issue-key}/tc.md`.
+
+Auth: uses GOOGLE_SHEETS_REFRESH_TOKEN from .env (falls back to GOOGLE_REFRESH_TOKEN).
+Run `scripts/format_tc_sheet.py` first to generate/update the target sheet.
 
 Usage:
-    python3 .kiro/skills/collect-gsheet-cases/fetch_gsheet_tcs.py --issue OMS-165 \
-        --sheet-id 1xFPBVfzndNbub-fvcvG-YWAw8rdjfGgKcXiym2U1XuI
+    python3 .kiro/skills/collect-gsheet-cases/fetch_gsheet_tcs.py \
+        --issue AO-306 \
+        --sheet-id 1WqA2mpZpcg2e3IRetZOjD0L8Si_6Z8Q2xkbKwiAIYOc
 
 Output: tasks/{issue-key}/tc.md
 """
@@ -50,12 +55,13 @@ def get_access_token() -> str:
     """Exchange refresh token for a short-lived access token."""
     client_id = os.getenv("GOOGLE_CLIENT_ID")
     client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
-    refresh_token = os.getenv("GOOGLE_REFRESH_TOKEN")
+    # Prefer the dedicated Sheets token; fall back to the generic refresh token
+    refresh_token = os.getenv("GOOGLE_SHEETS_REFRESH_TOKEN") or os.getenv("GOOGLE_REFRESH_TOKEN")
 
     missing = [k for k, v in [
         ("GOOGLE_CLIENT_ID", client_id),
         ("GOOGLE_CLIENT_SECRET", client_secret),
-        ("GOOGLE_REFRESH_TOKEN", refresh_token),
+        ("GOOGLE_SHEETS_REFRESH_TOKEN / GOOGLE_REFRESH_TOKEN", refresh_token),
     ] if not v]
     if missing:
         raise SystemExit(f"Missing env vars: {', '.join(missing)}. Check your .env file.")
@@ -71,7 +77,7 @@ def get_access_token() -> str:
 
 
 def find_sheet_tab(spreadsheet_id: str, issue_key: str, token: str) -> str:
-    """Return the sheet tab name matching TC-{issue-key}."""
+    """Return the sheet tab name matching {issue-key} or TC-{issue-key}."""
     resp = requests.get(
         f"{SHEETS_API_URL}/{spreadsheet_id}",
         headers={"Authorization": f"Bearer {token}"},
@@ -80,10 +86,11 @@ def find_sheet_tab(spreadsheet_id: str, issue_key: str, token: str) -> str:
     )
     resp.raise_for_status()
     sheets = [s["properties"]["title"] for s in resp.json().get("sheets", [])]
-    target = f"TC-{issue_key}"
-    if target not in sheets:
-        raise SystemExit(f"Tab '{target}' not found. Available tabs: {', '.join(sheets)}")
-    return target
+    # Try exact match first, then TC-{key} prefix convention
+    for candidate in [issue_key, f"TC-{issue_key}"]:
+        if candidate in sheets:
+            return candidate
+    raise SystemExit(f"Tab '{issue_key}' or 'TC-{issue_key}' not found. Available tabs: {', '.join(sheets)}")
 
 
 def fetch_rows(spreadsheet_id: str, tab: str, token: str) -> list[list[str]]:
@@ -111,6 +118,24 @@ def map_columns(header_row: list[str]) -> dict[str, int]:
     return cols
 
 
+def _prefix_er(er_cell: str, step_num: int) -> str:
+    """Prefix each bullet in an ER cell with [step_num] if not already prefixed.
+
+    The sheet stores ER bullets as "1. text\\n2. text" local numbering within the cell.
+    We strip that local numbering and replace with [step_num] so tc.md carries the
+    correct step association for downstream review tooling.
+    """
+    lines = [ln.strip() for ln in er_cell.splitlines() if ln.strip()]
+    result = []
+    for ln in lines:
+        # Strip leading "1. " / "2. " local bullet numbering from the sheet cell
+        ln = re.sub(r"^\d+\.\s+", "", ln)
+        if not re.match(r"^\[\d+\]", ln):
+            ln = f"[{step_num}] {ln}"
+        result.append(ln)
+    return "\n".join(result)
+
+
 def parse_tcs(rows: list[list[str]], cols: dict[str, int]) -> list[dict]:
     """Parse raw rows into TC dicts, merging continuation rows into parent TC."""
     width = max(cols.values()) + 1
@@ -136,7 +161,7 @@ def parse_tcs(rows: list[list[str]], cols: dict[str, int]) -> list[dict]:
                 "prerequisites": cell(row, "prerequisites"),
                 "steps": [cell(row, "steps")] if cell(row, "steps") else [],
                 "test_data": cell(row, "test_data"),
-                "expected": [cell(row, "expected")] if cell(row, "expected") else [],
+                "expected": [_prefix_er(cell(row, "expected"), 1)] if cell(row, "expected") else [],
                 "priority": cell(row, "priority"),
                 "requirement_ref": cell(row, "requirement_ref"),
                 "automation": cell(row, "automation"),
@@ -146,7 +171,8 @@ def parse_tcs(rows: list[list[str]], cols: dict[str, int]) -> list[dict]:
             if cell(row, "steps"):
                 current["steps"].append(cell(row, "steps"))
             if cell(row, "expected"):
-                current["expected"].append(cell(row, "expected"))
+                step_num = len(current["steps"])  # step was appended above
+                current["expected"].append(_prefix_er(cell(row, "expected"), step_num))
             if cell(row, "test_data"):
                 current["test_data"] = f"{current['test_data']}\n{cell(row, 'test_data')}".strip()
 
@@ -183,7 +209,9 @@ def render_markdown(issue_key: str, tcs: list[dict]) -> str:
         if tc["expected"]:
             lines.append("\n**Expected Result:**")
             for exp in tc["expected"]:
-                lines.append(f"{exp}")
+                for bullet in exp.splitlines():
+                    if bullet.strip():
+                        lines.append(f"- {bullet.strip()}")
         lines.append("")
 
     return "\n".join(lines)
@@ -213,7 +241,7 @@ def main() -> None:
         raise SystemExit(f"No test cases parsed from tab '{tab}'.")
     print(f"Parsed {len(tcs)} test cases")
 
-    output_dir = root / ".kiro" / "tmp" / issue_key
+    output_dir = root / "tasks" / issue_key
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / "tc.md"
     output_path.write_text(render_markdown(issue_key, tcs))

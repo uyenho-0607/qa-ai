@@ -16,9 +16,11 @@ Stress-test the coverage plan before a single case is written. Done when every `
 
 ## When to Run
 
-**Mandatory** — invoked by `generate-tcs` Phase 2, or the input is a Jira ticket only (no existing TCs from Testmo or a Sheet).
+**Mandatory** — invoked by `generate-tcs` Phase 2 (unconditional: the plan is grilled whether or not existing TCs were collected in 1.6), or the input is a Jira ticket only.
 **Optional** — the user asks, or the feature is complex or ambiguous.
-**Skip** — existing TCs are the primary input; the job is to structure them, not invent coverage.
+**Skip** — invoked standalone on a set of existing TCs where the job is to structure them, not invent coverage. Grade those with `review-tcs` instead.
+
+Rows already marked `covered by [existing TC]` are exempt from the three questions — they carry an existing TC's assertions, not new ones. Grill every other row.
 
 ## The Three Questions
 

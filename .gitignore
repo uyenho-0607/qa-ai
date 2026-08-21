@@ -8,3 +8,5 @@ __pycache__/
 .venv/
 venv/
 .playwright-mcp
+# Jira attachment staging (download-jira-attachments.sh)
+.tmp/

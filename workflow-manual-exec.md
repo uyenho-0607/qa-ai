@@ -1,7 +1,11 @@
 # Manual SIT Execution Workflow
 
+> **Status: partially implemented.** Steps 3 and 4 depend on the `manual-exec-design` and
+> `manual-exec-run` skills, which do not exist in `.claude/skills/` yet. Steps 1, 2, 5, and 6 run
+> today. Until those two skills are written, this file is the spec for them — not a runnable workflow.
+
 Six steps from a Jira ticket to a signed-off SIT run. Every step is an independent skill chained by a file,
-never by a skill calling another. Each artifact lands in `.kiro/tmp/{KEY}/`; the next step reads it from there.
+never by a skill calling another. Each artifact lands in `tasks/{KEY}/`; the next step reads it from there.
 Actions and rules live in the skills — this file owns the prompts, the gates, and the order.
 
 ```
@@ -13,12 +17,13 @@ Actions and rules live in the skills — this file owns the prompts, the gates, 
 |------|-------|--------|
 | 1 | `jira-retriever` | `jira.md` |
 | 2 | `collect-testmo-cases` \| `collect-gsheet-cases` | `tc.md` |
-| 3 | `manual-exec-design` | `exec.md`, `recon/` |
-| 4 | `manual-exec-run` | `exec.md` results, `evidence/`, `report.md` |
+| 3 | `manual-exec-design` ⚠️ not implemented | `exec.md`, `recon/` |
+| 4 | `manual-exec-run` ⚠️ not implemented | `exec.md` results, `evidence/{KEY}/`, `report.md` |
 | 5 | `report-bug` | Jira SIT Bug subtasks under `{KEY}` |
 | 6 | — | `report.md`, bug keys backfilled |
 
-Paths are relative to `.kiro/tmp/{KEY}/`.
+Paths follow `.claude/steering/project-config.md` → Folder Structure: chain files (`jira.md`, `tc.md`,
+`exec.md`, `recon/`, `report.md`) live in `tasks/{KEY}/`; evidence lands in `evidence/{KEY}/`.
 
 ## 📥 STEP 1: Load Jira
 
@@ -50,7 +55,7 @@ needs `save`; `collect-gsheet-cases` always writes.
 
 ```
 Design the manual execution plan for {KEY}.
-Use the manual-exec-design skill. Complete every phase in order.
+Use the manual-exec-design skill (⚠️ not implemented yet). Complete every phase in order.
 Report before I approve: reconciliation count, expected-result gaps found and how each was closed,
 every TC-sheet-vs-live-UI discrepancy, and every TC blocked on input.
 ```
@@ -63,7 +68,7 @@ every TC-sheet-vs-live-UI discrepancy, and every TC blocked on input.
 
 ```
 Execute the SIT run for {KEY}.
-Use the manual-exec-run skill. Follow exec.md exactly — never re-decide evidence type, steps, or grouping.
+Use the manual-exec-run skill (⚠️ not implemented yet). Follow exec.md exactly — never re-decide evidence type, steps, or grouping.
 Test first, record second. State the resume plan before executing.
 ```
 
@@ -73,7 +78,7 @@ Test first, record second. State the resume plan before executing.
 ## 🐞 STEP 5: Report Defects — GATE
 
 ```
-Show me the Bugs Found table from .kiro/tmp/{KEY}/report.md, verbatim.
+Show me the Bugs Found table from tasks/{KEY}/report.md, verbatim.
 File nothing yet. I confirm each one.
 ```
 
@@ -91,7 +96,7 @@ Rejected Candidates with its reason.
 ## 📊 STEP 6: Finalise the Report
 
 ```
-Backfill the filed {BUG-KEY}s into .kiro/tmp/{KEY}/report.md — Bugs Found and TC Results.
+Backfill the filed {BUG-KEY}s into tasks/{KEY}/report.md — Bugs Found and TC Results.
 Present the Summary table and every Failed/Blocked TC.
 ```
 
@@ -108,11 +113,10 @@ Blocked TC presented.
 | Design only, execute later | 1 → 2 → 3 |
 | Run passed, nothing to file | 1 → 2 → 3 → 4 → 6 |
 | Bug verification only | `verify-bug` skill instead |
-| Automating these TCs afterwards | `workflow-test.md` |
 
 ## Resumption
 
-Artifacts decide the entry point, not memory of a previous session: list `.kiro/tmp/{KEY}/` and start at the
+Artifacts decide the entry point, not memory of a previous session: list `tasks/{KEY}/` and start at the
 first step whose output is missing. Each skill asks overwrite / reuse / abort where its output exists. Never
 overwrite an `exec.md` holding execution results.
 
@@ -121,4 +125,5 @@ overwrite an `exec.md` holding execution results.
 - Jira access (Atlassian MCP), browser (Playwright MCP)
 - Testmo access (Testmo MCP), or `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REFRESH_TOKEN` in `.env` at the repo root for a TC sheet
 - SIT reachable, and every account named in the exec plan able to log in
-- `.kiro/tmp/` and `.kiro/evidence/` are gitignored — nothing in them reaches the remote
+- `tasks/`, `evidence/`, and `reports/` are **not** gitignored — avoid broad `git add`; stage per-ticket
+  files with the `git-workflow` skill

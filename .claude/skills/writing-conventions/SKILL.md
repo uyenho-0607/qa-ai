@@ -34,11 +34,18 @@ Rules:
 - Strip no-op rules (agent already does by default)
 
 ### 4. Validate against steering
-Check against general-conventions, pom-conventions, test-file-conventions, fixture-conventions. Zero contradictions — steering wins.
+```bash
+ls .claude/steering/
+```
+Read every file whose concern touches the new one. Zero contradictions — the existing file wins.
 
 ### 5. Save and wire up
-Save to `.claude/steering/<kebab-case-name>.md`.
-Add front-matter `inclusion` so the file loads at the right time — an unwired file never loads, and nothing errors.
+Save to `.claude/steering/<kebab-case-name>.md`. Write no frontmatter — `sync-kiro.py` injects Kiro's `inclusion:` on the way out.
+
+Steering files load only when a skill reads them. Name the new file in the load step of every skill that needs it, or it never loads and nothing errors. Then:
+```bash
+python3 sync-kiro.py
+```
 
 ## Branch: Audit
 
@@ -63,3 +70,5 @@ Same rules as Write. Don't change meaning — only form.
 - Never add `## Background` or `## Why`
 - File name = kebab-case matching title
 - Section headers match TEMPLATE.md exactly
+
+`TEMPLATE.md` governs new files. The existing `.claude/steering/` files predate it and use their own shapes — audit one for rule form, never to reshape it into the template.

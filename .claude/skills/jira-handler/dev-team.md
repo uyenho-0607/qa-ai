@@ -1,11 +1,12 @@
-# Dev Team (Bug Assignment)
+# Dev Team (Bug Assignment) — OTC (AQXPAY-OTC)
 
 | Name | Role | Account ID |
-|------|------|-----------|
-| Jing Wei Chai | FE | `712020:278b634e-ac02-4ea8-9216-2e0de5ef2002` |
-| Denlie | FE | `712020:7e03b951-33a5-4156-b3c2-8156d103bd6c` |
-| Banh Dai Nam | BE | `712020:a6f5d43a-02cd-467e-a275-07bad60aa32e` |
-| Nguyen Anh Tuan Dinh | BE | `712020:4ca78269-9659-4bb0-9355-fae5a0b297e2` |
-| Huy | BE | `712020:f8951014-294b-4b33-8da8-0170411ceff3` |
+|------|------|------------|
+| Thanh Trung Pham | FE | `712020:3b8595cb-fc78-4848-980b-64183d177fa9` |
+| Dinh Hieu Nguyen | FE | `712020:c6825437-30ca-4562-a0cd-5523078fc96d` |
+| Yong Sen Goi | FE | `712020:68b6b07a-e45e-4e8c-9f95-732d3fa2578f` |
+| Thi My Quyen Dao | BE | `712020:502badd1-098a-4658-b189-86c532ebcbaa` |
+| Nguyen Anh Tai | BE | `712020:f75a0413-9172-43b0-8f5b-6e188eb62be4` |
+| Thanh Liem Tran | BE | `712020:318f6855-26d5-4644-b928-9b4b545578a9` |
 
-**Assignment Rule:** FE bug → Jing Wei or Denlie | BE bug → Nam, Tuan, or Huy
+**Assignment Rule:** FE bug → Thanh Trung, Dinh Hieu, or Yong Sen | BE bug → Quyen, Anh Tai, or Liem

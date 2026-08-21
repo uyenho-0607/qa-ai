@@ -2,10 +2,17 @@
 """Regenerate .kiro/ from .claude/.
 
 .claude/ is the source of truth. .kiro/ is generated output — do not hand-edit it.
-The two trees differ by exactly two mechanical transforms:
+The two trees differ by exactly three mechanical transforms:
 
-  1. skill invocation:  Read .claude/skills/<name>/SKILL.md  ->  disclose_context("<name>")
+  1. skill invocation:  invoke .claude/skills/<name>/SKILL.md  ->  disclose_context("<name>")
+                        Read .claude/skills/<name>/SKILL.md   ->  disclose_context("<name>")
+                        Invoke the `<name>` skill             ->  disclose_context("<name>")
   2. paths:             .claude/...                           ->  .kiro/...
+  3. steering frontmatter: absent in .claude  ->  "inclusion: <value>" in .kiro
+
+`inclusion:` is Kiro-only frontmatter. Claude Code does not parse it in a plain .md, so
+it is stripped from .claude/steering/ and injected on the way out. STEERING_ALWAYS lists
+the files Kiro should always load; every other .claude/steering/*.md gets "manual".
 
 Usage:
     python3 sync-kiro.py                 regenerate .kiro/ from .claude/
@@ -25,17 +32,44 @@ from pathlib import Path
 SRC, DST = Path(".claude"), Path(".kiro")
 TEXT_SUFFIXES = {".md", ".py", ".sh", ".yaml", ".yml", ".json", ".txt"}
 
-SKILL_READ = re.compile(r"Read\s+\.claude/skills/([A-Za-z0-9_-]+)/SKILL\.md")
+SKILL_READ = re.compile(
+    r"(?:[Ii]nvoke\s+the\s+`([A-Za-z0-9_-]+)`\s+skill"
+    r"|`?[Rr]ead\s+\.claude/skills/([A-Za-z0-9_-]+)/SKILL\.md`?)"
+)
 DISCLOSE = re.compile(r'disclose_context\("([A-Za-z0-9_-]+)"\)')
 
+# Kiro steering docs it should load every session. Everything else in steering/ is "manual".
+STEERING_ALWAYS = {"project-config.md"}
+INCLUSION_FM = re.compile(r"\A---\ninclusion:[^\n]*\n---\n\n?")
 
-def to_kiro(s):
-    return SKILL_READ.sub(r'disclose_context("\1")', s).replace(".claude", ".kiro")
+
+def inclusion_for(rel):
+    """Kiro `inclusion:` value for this file, or None if it takes no frontmatter."""
+    if rel.parent.name != "steering" or rel.suffix != ".md":
+        return None
+    return "always" if rel.name in STEERING_ALWAYS else "manual"
 
 
-def to_claude(s):
+def _skill_sub(m):
+    name = m.group(1) or m.group(2)
+    return f'disclose_context("{name}")'
+
+
+def to_kiro(s, rel):
+    s = SKILL_READ.sub(_skill_sub, s).replace(".claude", ".kiro")
+    value = inclusion_for(rel)
+    if value:
+        # strip first so a stray frontmatter in .claude cannot be doubled
+        s = f"---\ninclusion: {value}\n---\n\n{INCLUSION_FM.sub('', s)}"
+    return s
+
+
+def to_claude(s, rel):
     s = s.replace(".kiro", ".claude")
-    return DISCLOSE.sub(r"Read .claude/skills/\1/SKILL.md", s)
+    s = DISCLOSE.sub(r"invoke .claude/skills/\1/SKILL.md", s)
+    if inclusion_for(rel):
+        s = INCLUSION_FM.sub("", s)
+    return s
 
 
 def sync(check):
@@ -43,7 +77,7 @@ def sync(check):
     for src in sorted(p for p in SRC.rglob("*") if p.is_file()):
         dst = DST / src.relative_to(SRC)
         if src.suffix in TEXT_SUFFIXES:
-            want = to_kiro(src.read_text())
+            want = to_kiro(src.read_text(), src.relative_to(SRC))
             have = dst.read_text() if dst.exists() else None
             differs = want != have
         else:
@@ -83,7 +117,7 @@ def promote(arg):
     if src.suffix not in TEXT_SUFFIXES:
         sys.exit(f"--promote handles text files only, got: {src.suffix}")
     dst = SRC / rel
-    want = to_claude(src.read_text())
+    want = to_claude(src.read_text(), rel)
     if dst.exists() and dst.read_text() == want:
         print(f"no change: {dst} already matches")
         return 0

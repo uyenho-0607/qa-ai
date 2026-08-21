@@ -7,6 +7,12 @@ jira==3.10.5
 # Note: uses raw HTTP to Sheets API — no gspread needed
 requests==2.32.3
 
+# ─── Google Sheets API (format_tc_sheet.py) ─────────────────────────────────
+# Used by: scripts/format_tc_sheet.py (write, patch, append, insert, remove TCs)
+google-api-python-client==2.199.0
+google-auth==2.56.3
+google-auth-oauthlib==1.4.0
+
 # ─── Utilities ──────────────────────────────────────────────────────────────
 # Used by: collect-gsheet-cases (fetch_gsheet_tcs.py → from dotenv import load_dotenv)
 python-dotenv==1.0.1

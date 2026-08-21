@@ -6,9 +6,13 @@ description: "Verify bug fixes — reproduce STR, capture evidence, post verific
 # Verify Bug
 
 ## Pre-Flight
-1. Read `.claude/domain/manual-task-lessons.md`
-2. Read `.claude/steering/jira.md` (transitions) + `project-config.md` (URLs)
-3. Read relevant domain module file
+1. Read `.claude/docs/lessons.md`
+2. Extract Jira transitions:
+   ```bash
+   awk '/^## /{p = /Transitions/} p' .claude/steering/jira.md
+   ```
+   Read `project-config.md` for URLs.
+3. Read the domain file for the app under test — `.claude/domain/otc-bo.md` (Backoffice) or `.claude/domain/otc-mobile.md` (Android / iOS app) — plus `.claude/domain/otc-shared.md` for rules spanning both (password policy, OTP, statuses, decimal precision).
 
 ## Flow
 
@@ -30,20 +34,22 @@ Evidence: {type} x{count}
 ### 3. Execute
 1. Open browser → follow STR → observe result
 2. Propose finding → GATE: wait for user agreement
-3. `Read .claude/skills/capture-evidence/SKILL.md` — never capture manually
+3. Invoke the `capture-evidence` skill — never capture manually
 
 ### 4. Post Comment
-`Read .claude/skills/jira-handler/SKILL.md` action: `post_verification`
+Invoke the `jira-handler` skill action: `post_verification`
 - If wrong → action: `fix_wrong_comment`
 
 ### 5. Transition
 
-Ready to Test in SIT → SIT in progress (41) → Pass SIT (51) / Reopen (81)
-Won't Do (71): bug no longer required
+Invoke the `jira-handler` skill action: `transition`. Ids come from the Pre-Flight extract — never from memory.
+
+Path: `Ready to Test in SIT` → `SIT in Progress` → `Pass SIT` on a pass, `Reopen` on a fail. `Not Required` when the bug is no longer required.
 
 ### 6. Cleanup
 - Ask about Testmo updates
 - Delete local files after upload confirmed
+- Verification turned up a reusable lesson — a locator that moved, a fixture that lies, an env quirk that cost a re-run → append one bullet to `.claude/docs/lessons.md` with the ticket key. Nothing reusable → skip.
 
 ## Rules
 - Evidence count must match or exceed original bug
