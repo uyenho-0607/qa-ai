@@ -1,76 +1,74 @@
 ---
 name: docs-media
-description: Insert local images/screenshots into Google Docs via MCP pipeline (stage → upload → insert → cleanup). Use when user asks to add images to a Google Doc, attach evidence to a doc, or says /docs-media, /docs-upload, /upload-docs.
+description: Insert local images/screenshots into Google Docs as inline images. Use when user asks to add images to a Google Doc, attach evidence to a doc, or says /docs-media, /docs-upload, /upload-docs.
 ---
 
 # Docs Media — Insert Images into Google Docs
 
-## Purpose
+## Tools
 
-Insert local image files as inline images into a Google Document using MCP tools.
+| Tool | Server |
+|------|--------|
+| `findElement` | google-docs |
+| `readDocument` (format=json) | google-docs |
+| `insertImage` | google-docs |
+| `deleteRange` | google-docs |
+| `replaceDocumentWithMarkdown` | google-docs |
+| `searchDriveFiles`, `createFolder`, `copyFile` | google-docs |
+| `listDriveFiles`, `deleteFile` | google-docs |
 
----
-
-## MCP Tools Used
-
-| Tool | Server | Purpose |
-|------|--------|---------|
-| `manage_drive` (upload, share) | google-workspace | Stage images to Drive |
-| `readdocument` (format=json) | google-docs | Read doc structure for indices |
-| `replacedocumentwithmarkdown` | google-docs | Format doc BEFORE inserting images |
-| `insertimage` | google-docs | Insert image at index |
-| `deletefile` | google-docs | Remove temp Drive files after |
-
----
+`readDocument` format=json returns 50–100KB+ raw JSON, truncated by the harness. Use only for `inlineObjects` (step 4 working copy, step 5). Parse the saved output file, not the raw text.
 
 ## Workflow
 
-### Phase 1 — Read Doc & Match Images
+### 1. Read the doc & map images to sections
 
-1. Get the Google Doc URL from user (extract document ID — string between `/d/` and `/edit`)
-2. **Read the doc** with `readdocument` format=json → understand the structure (numbered points, headings, labels)
-3. Get the local image paths from user
-4. **Match images to insertion points** — by name, number, or user instruction. Each image maps to a specific point in the doc.
-5. If the mapping is ambiguous, ask user to clarify before proceeding.
+1. Get the doc ID from the URL (the string between `/d/` and `/edit`).
+2. `findElement` with `elementType: "paragraph"` → lists paragraphs with index ranges and text previews. Use for target section titles, not `readDocument`.
+3. Get local image paths from the user. Match each to its section by name, number, or instruction. Ambiguous mapping → ask before proceeding.
+4. Insertion index: `endIndex` of the paragraph immediately after the section title (usually a blank line). `findElement` with `textQuery` also returns this directly for a known title.
+5. Local image path must resolve inside the MCP server's working directory (the project root) — paths under `~`, `/tmp`, or elsewhere are rejected. `evidence/` files satisfy this.
 
-### Phase 2 — Format Doc Structure (if needed)
+### 2. (Optional) Add headings first
 
-Only if the doc needs new headings/structure added before images.
+If new headings/structure are needed, add them with `replaceDocumentWithMarkdown` before inserting any images.
 
-Use `replacedocumentwithmarkdown` to set up headings/labels FIRST.
+### 3. Size every image — always pass both width and height
 
-⛔ Do this BEFORE inserting images — markdown replace wipes inline objects.
+`insertImage` only sizes the image when both `width` and `height` are given. `width` alone is ignored — the image inserts at full native pixel size.
 
-### Phase 3 — Stage & Upload
+```
+height = width * (native_height / native_width)
+```
 
-For each image:
+Sizing convention:
+- Portrait mobile screenshots (phone UI, tall aspect ratio): width **220pt**
+- Everything else (desktop screenshots, diagrams, landscape images): width **450pt**
 
-1. **Copy** to staging dir: `~/.local/share/google-workspace-mcp/workspace/<filename>`
-2. **Upload** to Drive: `manage_drive { operation: "upload", email: "ngocuyen.ho@aquariux.com", filePath: "<filename>", name: "<filename>" }` → save File ID
-3. **Share** publicly: `manage_drive { operation: "share", fileId: "<id>", role: "reader", type: "anyone" }`
+Applies to every `insertImage` call in step 4.
 
-### Phase 4 — Insert Images
+### 4. Insert — try the original doc first, fall back to a working copy if blocked
 
-1. If Phase 2 was performed, re-read doc with `readdocument` format=json (indices shifted)
-2. **Map each image to its target index** — find the paragraph matching the label/number from Phase 1, use its `endIndex` as insertion point
-3. **Insert in REVERSE order** (last image first) to avoid index shifting
-4. Use `insertimage`:
-   ```
-   documentId: "<doc_id>"
-   imageUrl: "https://drive.google.com/uc?id=<file_id>"
-   index: <target_paragraph_endIndex>
-   width: <see table below>
-   ```
+Call `insertImage` for the first mapped image, directly into the original doc (`localImagePath`, index/size from steps 1 and 3).
 
-#### Width
+- **Succeeds** → insert every remaining image the same way, in reverse order (last section first). Skip to step 5.
+- **Fails** with "Bad Request" / "problem retrieving the image" → switch to the working copy below for all remaining images. Do not retry the direct path.
 
-Default: **450pt** (fits A4 with margins). Override if user specifies otherwise.
+#### Working copy (only on the "Fails" branch above)
 
-### Phase 5 — Cleanup
+1. `searchDriveFiles { query: "docs-media-workspace", mimeType: "folder" }` — reuse if found. Otherwise `createFolder { name: "docs-media-workspace" }` in My Drive.
+2. `copyFile` the original doc into that folder → the working doc.
+3. Insert every remaining image into the working doc — same index/size/reverse-order rules as above.
+4. Some mapped sections still lack an image? Stop: report progress (n of m), share the working doc link. Don't merge back yet.
+5. Once every mapped section has its image: for each, `readDocument` the working doc, read `contentUri` from its `inlineObjects` entry, then `insertImage` that `contentUri` as `imageUrl` (not `localImagePath`) into the original doc at the same index.
+6. Delete the working doc (`deleteFile`).
 
-1. **Delete Drive files** — `deletefile { fileId: "<id>", permanent: true }` (safe — images are internalized by Google Docs to its own CDN)
-2. **Delete local staging copies** — `rm ~/.local/share/google-workspace-mcp/workspace/<filename>`
+Wrong index or size, in either doc? `deleteRange` the image (1 character — via `findElement` or the `inlineObjects` entry), then re-run `insertImage` with correct values.
 
-### Phase 6 — Verify
+### 5. Verify
 
-Read doc with `readdocument` format=json. Confirm `inlineObjects` section has entries with `contentUri` on `lh7-rt.googleusercontent.com`.
+`readDocument` format=json on the original doc → `inlineObjects` should have one entry per inserted image, each with a `contentUri` on `lh7-rt.googleusercontent.com` and a `size` matching the passed values.
+
+### Optional cleanup
+
+`insertImage` with `localImagePath` leaves an uploaded copy in Drive — safe to delete. The tool's response doesn't return its file ID. Find it with `listDriveFiles` (`orderBy: createdTime`, `sortDirection: desc`, filtered by filename), then `deleteFile { fileId, permanent: true }`.
