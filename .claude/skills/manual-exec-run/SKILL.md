@@ -1,127 +1,232 @@
 ---
 name: manual-exec-run
-description: Execute exec.md, the manual SIT plan: run by wave, capture evidence, write each TC result back in place. Use on "run manual tests", /exec-run.
+description: Execute exec.md, the manual SIT plan, on every target it names — Back Office web, the member mobile app, or both. Run by wave, capture evidence, write each result back in place. Use on "run manual tests", /exec-run.
 ---
 
 ## Contract
 
-- **Arg:** `{KEY}` — e.g. `OMS-1120`
-- **Workspace:** `tasks/{KEY}/`
+- **Args:** `{KEY}` [, `finalise`] — e.g. `AO-925`
 - **Reads:** `tasks/{KEY}/exec.md`
-- **Writes:** `tasks/{KEY}/exec.md` (results, in place), `tasks/{KEY}/report.md`, evidence to `evidence/{KEY}/`
-- **Missing input:** STOP — `exec.md` → invoke the `manual-exec-design` skill. Never build one here.
+- **Writes:** `tasks/{KEY}/exec.md` (result lines, in place), `tasks/{KEY}/report.md`, evidence and sidecars to `evidence/{KEY}/` — the paths `.claude/steering/project-config.md` § Folder Structure fixes
+- **With `finalise`:** run Phase 4 alone — backfill filed bug keys into the existing `report.md`
+- **Missing input:** STOP and name the producer. No `exec.md` → `/manual-exec-design {KEY}`; never build one here, and never run it from here. `finalise` with no `report.md` → STOP: Phases 1–3 have not run.
 
-**Required reads:** `.claude/docs/lessons.md`, `.claude/steering/playwright-rule.md`
+**Loads, at Phase 2 and not before:** `.claude/steering/capture-mechanics.md`, plus the row it gives each
+target kind the plan actually runs — a driver rule and a capture file — and no other row. Phase 1 reads
+nothing but `exec.md`.
 
-## Execution Rules
+## Rules
 
-The exec file is the plan — header tables (Evidence Groups, Waves) as much as TC fields (`**Steps:**`, `**Exp:**`, `**Ev:**`, `**Cap:**`, `**Teardown:**`). Follow every field; never re-decide one.
+- **The plan decides.** Never re-derive a target, surface, evidence mode, grouping, wave order, step, value or
+  checkpoint that `exec.md` states.
+- A result is decided by its assertion, never by whether evidence was captured.
+- One result per entry in a TC's `**Tgt:**` — one per pair on a `bo+app` TC.
+- Resolve every target string from a fresh DOM query or element listing immediately before acting on it.
+  A coordinate is never a target string; where one is unavoidable, `mobile-mcp-rule.md` § Element Resolution
+  Rules states the only case that allows it.
+- Take every input value from `**Data:**`. Never invent one.
+- A difference between two targets is a finding, not a variant to normalise. Record both observations.
+- Capture evidence here; file bugs with `report-bug`. This skill never files one.
+- Take every timestamp from `date '+%Y-%m-%d %H:%M'`. Never write one from memory.
 
-**Test first, record second.** Decide the result from a real run; capture evidence afterwards, in a separate pass.
+## Phase 1 — Load, preflight, resume
 
-- Decide each result from its assertion, never from whether evidence was captured.
-- Never think, explore, or resolve a locator inside a recording context.
-- Capture evidence here; file bugs with `report-bug`.
-
-## Phase 1 — Load and resume
-
-1. Read the header only, never the whole file — everything above `## Test Cases`:
+1. **Header.** Everything above `## Test Cases`, read once. It is the run's working set — the targets, the
+   evidence mode, Preflight, the wave order with each wave's groups, targets, reset and contexts, each
+   group's TCs and stem, Target Inventory, Skipped, and AC Coverage.
 
    ```
    sed -n '1,/^## Test Cases/p' tasks/{KEY}/exec.md
    ```
 
-2. Extract: wave order, each wave's groups, each group's TC list, evidence type and file.
-3. Record the run start timestamp.
-4. Confirm the environment is reachable and every account named in Execution Context can log in.
-5. **Resume check.** Read the Status column of Results Summary:
-   - `PASSED` → skip; never re-run, never overwrite its evidence.
-   - `PENDING` → execute.
-   - `FAILED` / `BLOCKED` → ask whether to retry or keep. To retry: reset to `PENDING`, clear Notes, run all six steps again, overwrite the evidence.
+2. **Index.** Every TC's start line, title and case ID, and every result line with its status:
 
-   Report the resume plan before executing: how many TCs run, how many are skipped.
+   ```
+   grep -n '^### TC-\|^\*\*R@' tasks/{KEY}/exec.md
+   ```
 
-Done when: header loaded, environment live, resume plan stated — and no TC block read yet.
+   It stays valid for the whole run: recording a result replaces one line with one line, so no line moves.
+   The result lines are authoritative. Never read § Results Summary to decide what to run — it is stale until
+   Phase 3 rewrites it.
+
+3. **Target preflight.** Per Preflight § Targets row — a device target: `mobile_list_available_devices`,
+   confirm it is present. A web target: confirm the URL responds. Then compare the build: `unknown` in the
+   plan → write the build you observe into the row and continue; a build that disagrees with a stated one →
+   stop and ask, because results against the wrong build prove nothing.
+4. **Data preflight.** Confirm every Preflight § Data item exists. The row names the TCs it blocks.
+5. **Resume.** Read the index's result lines, each target independently:
+   - `PASSED` → skip that target. Never re-run it, never overwrite its evidence.
+   - `PENDING` → execute it.
+   - `FAILED` / `BLOCKED` → ask whether to retry or keep. Keep → skip that target, its result stands. Retry →
+     set the line back to `PENDING`, clear its notes, run that target again from the TC's first step, and
+     overwrite that target's evidence.
+   - A `bo+app` TC resumes per pair — a pair is one unit of work, never one per surface.
+6. State the preflight results and the resume plan before executing: per target, how many TCs run, how many
+   are skipped, how many are blocked and on what.
+
+Done when: header and index are in hand, both preflights are resolved, every preflight block is written to
+its result lines, the resume plan is stated per target — and no TC block has been read yet.
 
 ## Phase 2 — Execute by wave
 
-Process waves in order; open as many sessions as each wave's `Contexts` column states.
+At the first wave on a target kind, load `.claude/steering/capture-mechanics.md` and its row for that kind.
+Never load the other kind's files.
 
-Load a group's TC blocks immediately before running it, and nothing else.
+Waves run in the order the Waves table lists them. Open each wave with the reset its `Reset` column states —
+a wave stating one clause per driver applies both — and open as many sessions as `Contexts` states.
 
-1. Index the file. **Re-run per group** — step 4 rewrites `**R:**` lines and shifts every line below:
+- **A `bo` or `app` wave** runs on every target in its `Targets` column, **one target to completion before
+  the next**.
+- **A `bo+app` wave** runs once per **pair**, with both sessions open together for the whole pair. Never
+  split a pair into two sequential passes: half a flow run twice is not the flow.
 
-   ```
-   grep -n '^### TC-' tasks/{KEY}/exec.md
-   ```
+Then, for each target — or pair — in turn, taking only the targets Phase 1 left runnable, and per group in
+the wave:
 
-2. Slice it. `{start}` = the group's first TC line; `{end}` = the next TC's line − 1, or `$` for the last group:
+1. **Slice it.** `{start}` = the group's first TC line from the index; `{end}` = the next TC's line − 1, or
+   `$` for the last group:
 
    ```
    sed -n '{start},{end}p' tasks/{KEY}/exec.md
    ```
 
-Rules:
+   Read only the group about to run. Never widen the range "to have context", never execute a TC from a
+   summarised or remembered block, and never read the file whole. A slice not beginning with `### TC-` means
+   the index is stale: re-index and re-slice.
 
-- Read only the group about to run. Never widen the range "to have context".
-- Lost or compacted mid-run: recover by re-reading the header and re-slicing the current group — never by reading the file in full.
-- Never execute a TC from a summarised or remembered block; re-slice instead.
+2. **Run each TC in it**, in plan order, by the five steps below. Skip a TC whose `**Tgt:**` excludes the
+   target in hand.
+3. **Capture the group's evidence** — see *After the group*, below.
 
-Run these six steps for every TC in the loaded group, in order.
+### 1. Precondition
 
-### 1. Set up the precondition
+Navigate to the screen and account state `**Pre:**` names. No `**Pre:**` line means the TC continues from the
+previous one: confirm that state is still current instead of re-navigating.
 
-Navigate to the page and account state `**Pre:**` names. No `**Pre:**` line = continues from the previous TC — verify that state is still active instead of re-navigating.
+### 2. Steps
 
-### 2. Run the steps
+Follow `**Steps:**` exactly as written, taking any `**Steps@{targets}:**` override that names the target in
+hand, and each element's target string from Target Inventory. On a `bo+app` TC every step carries an `@app` or `@bo` tag: execute it in the session that tag names,
+switching between steps and leaving both open throughout. An untagged step on a paired TC is an incomplete
+plan — stop and say so rather than guessing a surface.
 
-Follow the steps exactly as written.
-
-On locator failure: apply the Locator Recovery Protocol in `.claude/steering/playwright-rule.md`, update the Locators Reference table in the exec file, then continue from where the TC stopped.
+Where every TC in the group is `**Mut:** no` and they share a screen, assert them in one pass. Every
+`**Mut:** yes` TC runs as its own pass.
 
 ### 3. Assert
 
-Assert every condition under `**Exp:**` against DOM facts — testid presence, attribute value, text content, API response status. Record what was observed for each.
+Assert every `**Exp:**` checkpoint against the observable it names, and record what was observed, keyed by
+its checkpoint id. On a `bo+app` TC assert each checkpoint in the session its tag names, with the other still
+open.
+
+In `screenshot` mode the checkpoint's frame is captured **here**, at the assertion moment, under the stem its
+Checkpoint Evidence row carries — then its sidecar is written and the frame verified, per
+`.claude/steering/capture-mechanics.md`. The result still comes from the observed fact, never from the frame.
+
+On a failed assertion, before writing the result:
+
+1. Re-run the assertion once. Record `2/2` where it failed both times, `1/2` where it passed on the retry.
+   `1/2` is intermittent, not a certain defect.
+2. Run the backend check the checkpoint names — endpoints and their bearer token live in
+   `.claude/locator-cache.json` § `api`. Record its status and compared values, or `not checked` where the
+   checkpoint names none.
+3. Device target: `mobile_list_crashes` — record any crash ID new to this run, and fetch it. Web target: read
+   `browser_console_messages` and record the errors.
+4. Capture the diagnostic log — device logs per `.claude/steering/mobile-mcp-rule.md` § Diagnostic Rules,
+   network entries per `browser_network_requests`. Record only the lines naming the app under test.
 
 ### 4. Record the result
 
-Replace this TC's `**R:**` line and update its row in Results Summary. One line, `·`-separated:
+Replace this TC's `**R@{target}:**` line for the target in hand — one line for one line:
 
 ```
-**R:** {PASSED|FAILED|BLOCKED|SKIPPED} · {YYYY-MM-DD HH:MM} · {BUG-ID} · {notes}
+**R@{target}:** {PASSED|FAILED|BLOCKED} · {YYYY-MM-DD HH:MM} · {BUG-ID} · {notes}
 ```
 
-Omit BUG-ID while none is filed. Notes carry observed vs expected on a failure, the blocker on a block, and any locator change. Never write the evidence path — it is the group's file. Continue to the next TC in every case.
+Omit `{BUG-ID}` while none is filed. Notes carry, as they apply: observed against expected, the repro count,
+the backend check, the crash ID or console error, the blocker on a block, any target string that changed, and
+any capture that could not be produced. Never write the evidence path — it derives from the stem.
 
-Done when: the exec file on disk shows this TC's real status, not `PENDING`.
+A `bo+app` TC has **one** result line per pair. Name the surface the failure happened on in the notes; never
+split one flow into a pass on one surface and a fail on the other.
 
-### 5. Capture the evidence
+Done when: the file on disk shows this TC's real status for this target, and its line count is unchanged.
 
-Capture per `**Ev:**`, following `references/capture-mechanics.md`. `**Ev:**` names only the group — take type and file from the Evidence Groups table, the path from `**Evidence path:**` in Execution Context. `**Cap:**`, where present, states what the frame or moment must show.
+### 5. Teardown
 
-Done when: the file exists at the resolved group path. Record a capture failure in the TC's `**R:**` notes.
+Execute `**Teardown:**` exactly as written, in the session each tagged step names. No `**Teardown:**` line =
+none needed. Continue to the next TC whatever this TC's result.
 
-### 6. Tear down
+### After the group — capture the evidence
 
-Execute `**Teardown:**` exactly as written. No `**Teardown:**` line = none needed; proceed without closing or resetting.
+`screenshot` mode captured its frames inline at step 3; nothing more happens here.
 
-Done when: the state matches what the next TC's precondition expects.
+`normal` mode: once the whole group has been tested, replay it once per target into the capture its Evidence
+Groups row states — its type, its stem, and `**Cap:**` for the moment each checkpoint must show. Write the
+file and its sidecar per `.claude/steering/capture-mechanics.md`, then verify it there.
+
+Done when: every file and sidecar the plan names for this group and this target exists at its derived path
+and shows its asserted state.
+
+### Per wave
+
+Collect the crash IDs, console errors and log lines every failure in the wave produced. They belong in report
+Notes; a crash or an app-side error on a failing TC is FE evidence for `report-bug`.
+
+## Failure paths
+
+| What happened | The one outcome |
+|---|---|
+| A target is absent at preflight | every result line for that target → `BLOCKED`, naming it. Every other target still runs. |
+| A Preflight § Data item is missing | every TC that row names → `BLOCKED` on all its targets, naming the item |
+| An account cannot log in at the first TC needing it | every TC whose `**Pre:**` names it → `BLOCKED` on that target, naming the account |
+| A target string will not resolve | recover per the driver rule — `playwright-rule.md` § Locator Recovery, `mobile-mcp-rule.md` § Element Resolution Rules. Recovered: update Target Inventory and restart the TC from step 1. Not recovered: `BLOCKED`, naming the element and its screen. Never a guessed tap. |
+| An assertion fails | the failure protocol at step 3, then `FAILED`, then the next TC |
+| A capture fails or cannot be verified | re-capture once; still failing → note it in the result. The result never changes. |
+| The app crashes mid-TC | `FAILED` carrying the crash ID; re-apply the wave's `Reset` before the next TC |
+| The wave's state cannot be recovered | the wave's remaining TCs on that target → `BLOCKED`, naming the cause. The next wave still runs. |
+| Context is lost or compacted mid-run | re-read the header, re-index, re-slice the current group. Never read the file whole, never resume from memory of a block. |
+| `finalise` finds no `report.md` | STOP — Phases 1–3 have not run |
 
 ## Phase 3 — Report
 
-1. Confirm every Results Summary row matches its TC's `**R:**` line. Read the result lines alone, not the TC blocks:
+1. Re-read the index. A line still `PENDING` never ran: run it, or write `BLOCKED` with the reason it did not.
+   Then regenerate `exec.md` § Results Summary from the result lines — once, here, and nowhere else.
+2. `ls evidence/{KEY}/` — confirm every file and sidecar the plan names is there. Note any that is missing.
+3. Write `tasks/{KEY}/report.md` from `REPORT.md`, filling every section it defines. Its content comes from
+   three places already in hand: the exec header (Metadata, Preflight § Targets, AC Coverage, Skipped), the
+   index (TC Results, and Executed At from the earliest and latest result timestamps), and the result notes
+   (everything else). Re-slice a failing TC's block only for its `**Exp:**` text.
+4. Judge every failure. Caused by the product → a Bugs Found row **and** a Failed & Blocked Details entry.
+   Caused by the environment, the data, or the plan → the entry alone, carrying the reason it is not a defect.
+5. Build Target Differences by comparing the per-target notes of every TC that ran on more than one target. A
+   single-target run writes *None*.
+6. Present the Summary table, Bugs Found, Target Differences, and every failed or blocked TC.
+
+Done when: `report.md` is complete, no result line is still `PENDING`, every AC carries a result, every
+failure carries its repro count and backend check, and every failure sits either under Bugs Found or with the
+reason it is not a defect.
+
+## Phase 4 — Finalise (`finalise` arg only)
+
+Runs after `report-bug` filed the confirmed defects. Edits `report.md` and `exec.md` only — posts nothing to
+Jira.
+
+1. Read `tasks/{KEY}/report.md`. List every Bugs Found row still carrying `—` in its Bug column. None left →
+   say so and stop.
+2. Take the `{TC-ID} → {BUG-KEY}` pairs from the invocation. List every row still unpaired and ask: filed
+   under which key, or declined. Never guess a key.
+3. Per pair, write the key everywhere that TC appears — its Bugs Found row, its TC Results row, its
+   Failed & Blocked Details `**Bug:**`, and the failing target's result line in `exec.md`:
 
    ```
-   grep -n '^### TC-\|^\*\*R:\*\*' tasks/{KEY}/exec.md
+   grep -n '^### TC-\|^\*\*R@' tasks/{KEY}/exec.md
    ```
 
-   Re-run any TC still `PENDING`, or mark it `BLOCKED` with the reason it never ran. Re-slice a block only for notes not already in hand.
-2. Confirm every evidence file exists at its stated path, and that its name lists exactly its group's TC-IDs.
-   Note any missing file. A name whose IDs disagree with the Evidence Groups table is a wrong-file capture —
-   re-capture it, never rename it.
-3. Record the run end timestamp.
-4. List every failure that looks like a product defect under Bugs Found — TC, expected, observed, evidence path. Re-slice each failing TC's block for its `**Exp:**` and `**R:**` notes. Never file a bug from this skill.
-5. Write `tasks/{KEY}/report.md` from `REPORT.md`, filling every section it defines.
-6. Present the Summary table, Bugs Found, and every Failed and Blocked TC.
+4. Move every declined candidate to `## Rejected Candidates` with its reason, and drop its Bugs Found row.
+5. Recompute the Summary counts and pass rate from TC Results, per target.
+6. Present the Summary table and every failed or blocked TC.
 
-Done when: `report.md` is complete, no Results Summary row is still `PENDING`, and every failure appears either under Bugs Found or with a reason it is not a defect.
+Done when: every Bugs Found row carries a bug key, every declined candidate sits under Rejected Candidates
+with its reason, every failed target's result line carries the same key as its report row, and the Summary
+counts match TC Results.

@@ -15,6 +15,11 @@ New machine, or a helper fails with `ModuleNotFoundError`, or an MCP tool is mis
 
 Env values, credentials, `tasks/{KEY}/` layout, Jira and Testmo ids: read `.claude/steering/project-config.md`.
 
+## Driving the UI
+
+- **Locators are cached — read before you write one.** `.claude/locator-cache.json`: `otc-bo` (BO web, Playwright), `bfg-otc-app` (member app — platform-neutral `screens`, plus `android` commands and taps measured at one resolution), `api` (BO endpoints). Add what you verify. Never cache a coordinate without the resolution it was measured at.
+- **Logging in from scratch is a runbook, not guesswork.** Member app from a cold device — boot the AVD, env gate, passcode, email OTP: `.claude/domain/login-flow.md`. BO web is `BO_URL` plus the credentials in `.claude/steering/project-config.md`.
+
 ## Repo
 
 - `.claude/` is the source. After editing it, run `python3 sync-kiro.py` to regenerate `.kiro/`.

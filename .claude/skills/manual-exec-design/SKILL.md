@@ -1,96 +1,172 @@
 ---
 name: manual-exec-design
-description: Build exec.md, the manual SIT execution plan: triage TCs, deepen expected results, group evidence, order waves. Use on "design exec plan", /exec-design, or when manual-exec-run finds no exec.md.
+description: Build exec.md, the manual SIT execution plan, from jira.md and tc.md — targets, triage, recon, expected results, evidence, waves. Use on "design exec plan", or when manual-exec-run finds no exec.md.
 ---
 
 ## Contract
 
-- **Arg:** `{KEY}` — e.g. `OMS-1120`
-- **Workspace:** `tasks/{KEY}/`
+- **Args:** `{KEY}` [, `targets={list}`] [, `evidence={normal|screenshot}`] — e.g. `AO-925 targets=ios,android`
 - **Reads:** `tasks/{KEY}/jira.md`, `tasks/{KEY}/tc.md`
-- **Writes:** `tasks/{KEY}/exec.md`
-- **Missing input:** STOP and name the producer — `jira.md` → invoke the `jira-retriever` skill with `save`; `tc.md` → invoke the `collect-testmo-cases` skill with `save`, or invoke the `collect-gsheet-cases` skill. Never fall back to Jira MCP or to chat context.
-- **Output exists:** ask — overwrite (rebuild from Phase 1), reuse (keep the file, run no phases), or abort. Never clobber a file holding execution results.
+- **Writes:** `tasks/{KEY}/exec.md`, recon screenshots to `tasks/{KEY}/recon/`, verified locators to `.claude/locator-cache.json`
+- **Missing input:** STOP and name the producer — `jira.md` ← `/fetch-jira {KEY}` with `save`; `tc.md` ← `/collect-testmo {KEY}` with `save`, or `/collect-gsheet`. Never fall back to Jira MCP or to chat context, and never run the producer from here.
+- **`exec.md` exists:** ask — overwrite (rebuild from Phase 1), reuse (keep the file, run no phases), or abort. Never clobber a file holding execution results.
 
-**Hard rule:** complete every phase in order. Never skip one.
+**Hard rule:** run every phase in order. Never skip one.
 
-## Phase 1 — Read the inputs
+## Surfaces and targets
 
-- Read `tasks/{KEY}/jira.md`. List every specified behaviour, including implicit constraints.
-- Read `tasks/{KEY}/tc.md`. List every TC with its ID, steps, and expected result.
-- Record the build under test from the Jira fixVersion or the app's about/footer. Write `unknown` rather than inventing one.
+A TC's **surface** is what it exercises. A run's **targets** are where it executes.
 
-Done when: every behaviour is listed, every TC is accounted for, and the build is recorded or explicitly `unknown`.
+| Surface | What it exercises | Targets it can reach | Pack |
+|---|---|---|---|
+| `bo` | OTC Back Office at `BO_URL` — maker / checker / admin | `bo` (desktop), `bo-mv` (390×844) | `references/surface-bo.md` |
+| `app` | Member app — one React Native + Expo codebase | `ios`, `android`, `app-web` (Expo web build) | `references/surface-app.md` |
+| `bo+app` | One flow crossing both — member acts in the app, checker acts in BO | one `app` target paired with one `bo` target | both |
 
-## Phase 2 — Recon the UI
+**Resolution rule:** a TC runs on `selected targets ∩ the targets its surface can reach`. A TC whose surface
+reaches none of the selected targets is Skipped, naming the target it needed.
 
-Invoke the `ui-discovery` skill — scope it to the pages named in the TC steps.
+## Phase 1 — Targets
 
-- Flag every discrepancy between the TC's expected result and the live UI.
-- Build the locator table, naming each entry's source.
-- Record any state left changed by recon.
+Ask with `AskUserQuestion` — multi-select from the five targets above — unless `targets=` already answers it.
 
-Done when: the locator table is complete, every entry names its source, and all discrepancies are noted.
+Done when: the target list is fixed and written down.
 
-## Phase 3 — Classify the TCs
+## Phase 2 — Read the inputs
 
-Apply `.claude/steering/manual-exec-triage.md` to every TC:
+- `tasks/{KEY}/jira.md` — the affected module, and every specified behaviour including implicit constraints.
+  Number every acceptance criterion `AC-1`, `AC-2`, … .
+- `tasks/{KEY}/tc.md` — every TC with its case ID, title, steps and expected result.
 
-- Agent-executable → include in the exec file
-- Human-executable → Skipped section with reason
-- Ambiguous → ask before deciding
+Done when: the module is recorded, every AC carries a number, and every TC is listed with the case ID
+`tc.md` gave it.
 
-Done when: every TC is classified with no unresolved ambiguity.
+## Phase 3 — Cover the ACs
 
-## Phase 4 — Strengthen the expected results
+Map every AC to the TCs that verify it.
 
-Reference `references/expected-results.md`. Per agent-executable TC: assign depth levels, run the four questions, rewrite the expected result to close every gap.
+- Covered → list them.
+- Uncovered → author a TC for it now, to the same standard as a sheet TC: exact account, deterministic steps, explicit values, assertions tied to observed facts. It carries no case ID. Record it under Added Coverage.
+- Outside this ticket's scope → mark it out of scope and name the owning ticket.
 
-Done when: every TC states each depth level it needs as a separate checkable assertion, every assertion is tied to an objective DOM fact, and no TC carries a single-bullet expected result unless it verifies a single static state.
+Authoring here, ahead of recon, is what puts an added TC's screens inside the recon scope.
 
-## Phase 5 — Group the evidence
+Done when: no AC is blank — each carries covering TCs, an Added Coverage TC, or an out-of-scope owner.
 
-Reference `references/evidence-rules.md`. Group the TCs, assign an evidence type per group or solo TC, derive each file path, and build the Evidence Groups table defined in `TEMPLATE.md`.
+## Phase 4 — Classify
 
-Done when: every TC has a group, an evidence type, and a file path; every TC sharing a file names the others it shares with; every SCREENSHOT choice satisfies all four conditions in `references/evidence-rules.md`; and every file name carries every member TC-ID per that file's § Naming.
+Apply `.claude/steering/manual-exec-triage.md` to every TC, sheet and added alike. A TC that is
+human-executable, or that needs biometrics, a push notification, a camera, or a physical device, goes to
+Skipped with its reason.
 
-## Phase 6 — Order the waves
+Per included TC:
 
-Order groups to minimise state transitions:
+- `**Surf:**` — `bo`, `app`, or `bo+app`. **Paired mechanics are opt-in:** pairs, `@app` / `@bo` tags and one
+  result per pair belong to a `bo+app` TC and to nothing else, however many targets a plain TC runs on.
+- `**Tgt:**` — the resolution rule's result; a `bo+app` TC carries pairs instead, per `TEMPLATE.md`
+  § `bo+app` only. Where the Phase 1 selection cannot form a pair, return to Phase 1 and ask — never drop the
+  TC quietly.
+
+Done when: every TC is classified with no ambiguity left, and every included TC carries a surface and at least one target or pair.
+
+## Phase 5 — Recon
+
+Load the surface pack for every surface now in play, and only those. Every phase from here on reads them.
+
+Then follow `references/recon.md`, on every selected target.
+
+Resolve each target's identity for Preflight in the same pass — device identifiers from
+`mobile_list_available_devices`, `BO_URL` for `bo` / `bo-mv`, plus the per-surface rows each pack lists under
+§ Preflight. Record each target's build from the Jira fixVersion, the app's About screen, or the BO footer;
+where none of the three gives one, write `unknown`.
+
+Then apply what recon found:
+
+- An element unaddressable on every target the TC applies to → Skipped, naming the element and the fix its pack states.
+- Unaddressable on some → keep the TC, drop those targets from `**Tgt:**`, record why.
+
+Done when: the reference's Done-when list is satisfied, every selected target carries an identifier and a build, and every unaddressable element has produced a skip or a dropped target.
+
+## Phase 6 — Strengthen the expected results
+
+Follow `references/expected-results.md` for every included TC.
+
+Record every divergence between targets for the gate — an assertion holding on one and not another is a
+finding to raise, never a per-target variant to write.
+
+Above 20 TCs, work in batches of ten and reconcile each batch against the TC list before starting the next.
+
+Done when: every TC states each depth level it needs as its own checkpoint, every checkpoint is tied to an observable its surface can produce, and no TC carries a one-bullet expected result unless it verifies a single static state.
+
+## Phase 7 — Plan the evidence
+
+Ask the mode with `AskUserQuestion`, unless `evidence=` already answers it. The whole TC list is in view by now, so quantify the choice: how many TCs `normal` would give a video, and how many checkpoints `screenshot` could not prove. `normal` is the default.
+
+Then follow `references/evidence.md` for the mode chosen.
+
+Done when: the mode is recorded, every TC has its evidence planned for every entry in its `**Tgt:**`, and every stem follows `references/evidence.md` § Stem.
+
+## Phase 8 — Order the waves
+
+Mark every TC's `**Mut:**` flag.
+
+Order the groups and solo TCs to minimise state transitions:
 
 - Place a dependent TC immediately after its prerequisite, with nothing between them.
-- Omit both `**Pre:**` and `**Teardown:**` where a TC ends in the next TC's precondition — the omission *is* the continuation.
-- Never place TCs that mutate the same data in the same wave.
-- Assign 2 contexts only to a TC needing two sessions open at once. Otherwise 1.
-- Cap each wave at one VIDEO group.
+- Keep TCs that mutate the same data in separate waves.
+- One surface per wave, except a wave of `bo+app` TCs.
+- At most one VIDEO group per wave.
+- `Targets` — the targets its TCs share; the pairs, for a `bo+app` wave.
+- `Reset` — the lightest reset in the wave's pack § State reset that reaches its first precondition, written
+  as the action itself. The first wave on a target resets fully. A wave whose targets span both drivers, and
+  every `bo+app` wave, states one clause per driver: `app: relaunch app · bo: fresh context`.
+- `Contexts` — 1, except a wave whose TCs need two sessions at once; every `bo+app` wave is at least 2.
 
-Build the Waves table defined in `TEMPLATE.md`.
+Done when: every TC carries a `**Mut:**` mark, every group and solo TC sits in a wave, and every wave carries `Targets`, `Reset` and `Contexts`.
 
-Done when: every group and every solo TC has a wave, every wave needing 2 contexts names the TC that requires them, and no wave holds two VIDEO groups.
+## Phase 9 — Write `exec.md`
 
-## Phase 6.5 — GATE
+Write `tasks/{KEY}/exec.md` from `TEMPLATE.md`. It is the single authority on every section and every field the file carries; fill each one from the phase that built it:
 
-Present the classification, the Evidence Groups table, and the Waves table. Stop until they are approved. Never write the exec file before approval.
+| Section | Built by |
+|---|---|
+| Execution Context | Phases 1, 2, 5, 7 |
+| Preflight | Phase 5 |
+| AC Coverage · Added Coverage | Phase 3 |
+| Evidence Groups \| Checkpoint Evidence | Phase 7 |
+| Waves | Phase 8 |
+| Results Summary · Skipped | Phases 4, 5 |
+| Target Inventory · Unaddressable Elements | Phase 5 |
+| Test Cases | Phases 4, 6, 7, 8 |
 
-## Phase 7 — Write the exec file
+The file states *what* to execute. `manual-exec-run` owns *how* — capture mechanics, step ordering, result
+recording, failure handling.
 
-Write `tasks/{KEY}/exec.md` from `TEMPLATE.md`, filling every section it defines with what Phases 2–6 built.
+Done when: every section `TEMPLATE.md` defines is present, or omitted on the condition its own note states; and every precondition matches the environment's actual state after recon.
 
-- Give each TC an exact account and starting state under `**Pre:**`, or omit the line where it continues from the previous TC.
-- Write the username and password for every account named in Execution Context.
-- Number the steps and make each one deterministic.
-- Give every input field an explicit value.
-- Give `**Teardown:**` explicit steps, or omit the line where nothing needs restoring.
-- Keep how-to-execute rules out of the exec file — capture mechanics, step ordering, failure handling. They belong to `manual-exec-run`.
+## Phase 10 — Reconcile, then GATE
 
-Done when: every TC section is complete, the Locators Reference table carries every locator from Phase 2, Environment deviations names every state recon changed or says `none`, and every precondition matches the environment's actual state.
+Reconcile against the written file:
 
-## Phase 8 — Present
+- `tc.md` count == included + skipped, and every TC carries the case ID `tc.md` gave it.
+- Every Phase 2 AC appears in AC Coverage.
+- Every included TC carries one `**R@…:**` line per entry in its `**Tgt:**`, and no more.
+- Every included TC has a Results Summary row whose every non-`N/A` cell reads `PENDING`.
+- Every Preflight § Data row names the TCs that need it.
 
-Reconcile first: `tc.md count == agent-executable + skipped`, and every TC carries the Case ID from `tc.md`. List every unaccounted TC and every missing Case ID, and resolve them before presenting.
+Resolve every mismatch before presenting.
 
-Then present:
+Then present, and stop until the user approves:
+
 - Reconciliation result
-- Gaps found and how each was strengthened
-- Every TC-sheet-vs-live-UI discrepancy
-- Every TC blocked on input
+- Targets and evidence mode
+- The classification — each TC's surface and targets
+- Every uncovered AC, and the Added Coverage TC written for it
+- Expected-result gaps found, and how each was closed
+- Every unaddressable element, the TCs it blocks, and the fix its pack names
+- Every element or behaviour present on one target and absent on another
+- Every TC-sheet-vs-live discrepancy
+- Preflight items that could not be confirmed
+- Every `bo+app` TC, its pairs, and the two sessions each needs
+- `screenshot` mode — every checkpoint a frame cannot prove
+- Every question still unanswered

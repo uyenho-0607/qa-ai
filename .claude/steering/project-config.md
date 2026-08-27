@@ -10,11 +10,15 @@ Tell the user to run `./onboarding.sh` themselves — it needs a terminal and re
 | Variable | Value |
 |----------|-------|
 | `PROJECT_KEY` | `AO` |
-| `BO_URL` | `https://dashboard.aqxotc-sit.s20ip12.com` — login at `/login` — **VPN required** |
+| `BO_URL` | `https://dashboard.aqxotc-sit.s20ip12.com` — login at `/login` |
 | `BO_MAKER` | `maimaker@yopmail.com` |
 | `BO_CHECKER` | `maichecker@yopmail.com` |
 | `BO_ADMIN` | `maiadmin@yopmail.com` |
+| `MEMBER_APP_BUSINESS` | `mth2608@mailinator.com` |
 | `SHARED_PASSWORD` | `Te5t1ng!` |
+| `APP_PASSCODE` | `111111` — mobile app 6-digit passcode; one-time setup **per device**, not an account credential |
+| `APP_ENV_GATE_EMAIL` | `aq@aq.com` — mobile app SIT environment unlock; one-time on a **fresh install** |
+| `APP_PACKAGE` | `com.bfgto.sit.app` — mobile app under test, **SIT** build; React Native, same identifier on iOS and Android. Android launch activity `com.bfgtoapp.MainActivity`. |
 | `TC_SHEET_ID` | `1vWynEv7nsgF-dTJ8QB2o9M1fUpQamEcr4xd1q_yxLqI` |
 
 OTC has one Back Office, not three apps — all three accounts share `BO_URL` and `SHARED_PASSWORD`.
@@ -43,7 +47,12 @@ reports/{KEY}/  Coverage reports — commit if tracking history
 
 .claude/domain/  App knowledge base — modules, URLs, UI rules
 .claude/domain/flows.md  `ui-discovery` flow file — behaviour, validation, transitions
-.claude/locator-cache.json  Cached `data-testid` selectors for Playwright
+.claude/domain/login-flow.md  Mobile app login runbook — setup, OTP, device driving
+.claude/locator-cache.json  Cached locators — `otc-bo` web, `bfg-otc-app` mobile, `api` endpoints
+
+scripts/  Helpers — run with `.venv/bin/python`
+  mailtm_otp.py  Throwaway mail.tm inbox — `new` to create, `otp` to pull the code
+  mailinator_otp.py  Public Mailinator inbox — `otp <address>` pulls the code, no setup
 ```
 
 ## Tools

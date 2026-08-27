@@ -137,18 +137,30 @@ verify AO-306
 /branch AO-306   →   /push   →   /mr
 ```
 
-## Manual SIT execution (work in progress)
+## Manual SIT execution
 
-`workflow-manual-exec.md` specs a six-step pipeline from ticket to signed-off SIT run
-(load Jira → load TCs → design plan → execute → report defects → finalise). Steps 1, 2, 5, and 6 use
-existing skills; steps 3 and 4 need `manual-exec-design` and `manual-exec-run`, which are not written yet.
-Treat that file as the spec for them, not a runnable workflow.
+`workflow-manual-exec.md` owns the six-step pipeline from ticket to signed-off SIT run
+(load Jira → design plan → execute → file defects → finalise → Testmo), and the prompts and gates between
+its steps. `manual-exec-design` writes the plan, `exec.md`; `manual-exec-run` executes it and writes
+`report.md`, then backfills the filed bug keys with its `finalise` arg. The plan states *what* to execute;
+the run owns *how*.
 
 ## Helper scripts
 
 Python helpers under `.claude/skills/*/` are invoked by their owning skill, never standalone.
 `scripts/format_tc_sheet.py` backs the Google Sheet export and is used by `generate-tcs`,
 `review-tcs`, and `apply-sheet-feedback`.
+
+`scripts/mailtm_otp.py` is standalone: it makes a throwaway mail.tm inbox and waits for the
+OTP that lands in it. Free, no API key. `new` prints the address, `otp` prints the code.
+Credentials go to `.tmp/mailtm/{slot}.json`, which is gitignored.
+
+`scripts/mailinator_otp.py` is the same job against a Mailinator **public** inbox — no API key
+and nothing to create, since naming an inbox is enough. `otp <inbox>` prints the code, `list`
+and `read` inspect it. Pass `--after now` (or an epoch-ms stamp taken *before* triggering the
+mail) so a stale code already sitting in the inbox cannot be returned. Reach for this when
+mail.tm or yopmail is unreachable — yopmail is blocked on the office network. Public inboxes
+are readable by anyone, so SIT throwaways only.
 
 ## State
 

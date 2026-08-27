@@ -2,99 +2,62 @@
 inclusion: manual
 ---
 
-# Playwright MCP — Interaction Rules
+# Playwright MCP Rules
 
-Project URL and credentials (`BO_URL`, `BO_MAKER`, `BO_CHECKER`, `BO_ADMIN`, `SHARED_PASSWORD`) are in `project-config.md`. `BO_URL` requires VPN.
-
----
+Governs every browser interaction. URLs and credentials: `.kiro/steering/project-config.md` § Environment.
 
 ## Tool Rule
+Use `browser_run_code_unsafe` for ALL interactions. Never use `browser_snapshot`, `browser_click`,
+`browser_type` — unreliable on SPAs.
 
-**Use `browser_run_code_unsafe` for all browser interactions.** Never use `browser_snapshot`, `browser_click`, `browser_type`, or other individual MCP tools — they are unreliable on SPAs.
+Exception: `browser_navigate` as call 1 to handle dead sessions. Then `page.goto()` inside `run_code_unsafe`.
 
-**One exception:** use `browser_navigate` as the first call of every browser task to handle dead sessions (auto-creates a new page if the previous one closed). Within the same session, skip it and use `page.goto()` inside `run_code_unsafe`.
-
-Never close the browser between tasks in the same session.
-
----
+**Pattern:** call 1 = `browser_navigate` → call 2+ = `run_code_unsafe` (interact + read + screenshot)
 
 ## Timeouts
+- `click()`, `fill()`, `check()`, `waitForSelector()`: `{ timeout: 3000 }`
+- `page.goto()`: default
+- After `waitForLoadState('networkidle')`: add `waitForTimeout(500)`
 
-- All `click()`, `fill()`, `check()`: `{ timeout: 3000 }`
-- All `waitForSelector()`: `{ timeout: 3000 }`
-- `page.goto()`: default timeout is acceptable
-- After `waitForLoadState('networkidle')`: add `waitForTimeout(500)` for SPA render
-
-**A locator timing out at 3s means the locator is wrong — fix the selector, do not increase the timeout.**
-
----
+Timeout at 3s = wrong locator. Fix the selector, don't raise the timeout.
 
 ## DOM-First Rule
+Before any click/fill: check `locator-cache.json` — one page key at a time, never the whole file:
+`jq 'keys' .kiro/locator-cache.json` to find the key, then `jq '.{page_key}' .kiro/locator-cache.json`.
 
-**Always read the DOM before interacting.** Never guess locators.
+Missing? scan: `page.evaluate(() => [...document.querySelectorAll('[data-testid]')].map(e => e.dataset.testid))`
 
-Before any click or fill:
-1. If `.kiro/locator-cache.json` exists, check it for cached selectors — use them directly
-2. If not cached: `page.evaluate(() => [...document.querySelectorAll('[data-testid]')].map(e => e.dataset.testid))` to scan
-3. Use the discovered selector with `{ timeout: 3000 }`
-
-Locator priority: `data-testid` → `role + name` → CSS → text (last resort)
-
----
+Priority: `data-testid` → `role+name` → CSS → text
 
 ## Stateful Form Pattern
+`navigate → capture state → input → waitForResponse|waitForTimeout(500) → evaluate DOM → next input`
 
-For forms where UI state changes after each input (validation messages, field toggles, dynamic values):
+Never batch multiple inputs without intermediate state verification.
 
-```
-navigate → capture state → input → waitForResponse OR waitForTimeout(500) → evaluate DOM → next input
-```
-
-**Never batch multiple inputs into one script block without intermediate state verification.**
-
-Capture after every action that may trigger: validation messages, field enable/disable, value recalculation, new elements appearing.
-
----
-
-## Locator Recovery Protocol
-
-When a locator fails, run this sequence before reporting failure:
-
+## Locator Recovery
 1. Try `data-testid` from cache
 2. Try `role` + accessible name
-3. Try CSS (unique class or attribute)
-4. Re-scan DOM via `page.evaluate()` — page may have re-rendered
-5. Take screenshot + report what was found vs what was expected
+3. Try CSS
+4. Re-scan DOM via `page.evaluate()`
+5. Screenshot + report found vs expected
 
-**Never guess or skip.** A locator failure means the page structure changed or was never mapped — it is not permission to proceed without the element.
-
----
+## Session Reset
+- Reach a known page by navigating to its URL, never by clicking back through history.
+- A fresh session is a fresh context: `browser.newContext()`. Nothing else clears storage reliably.
+- `bo-mv` calls `browser_resize` to 390×844 before its first navigation.
 
 ## Network Inspection
-
-Set up response listeners **before** navigation when API inspection is needed:
-
+Set listeners **before** navigation:
 ```js
 const responses = [];
 page.on('response', async resp => {
-  const url = resp.url();
-  if (url.includes('/api/') || url.includes('/backoffice/')) {
-    try { responses.push({ url, status: resp.status(), body: JSON.stringify(await resp.json()).slice(0, 500) }); } catch {}
+  if (resp.url().includes('/api/') || resp.url().includes('/backoffice/')) {
+    try { responses.push({ url: resp.url(), status: resp.status(), body: JSON.stringify(await resp.json()).slice(0,500) }); } catch {}
   }
 });
 await page.goto(TARGET_URL);
 ```
 
----
-
-## Batching Rule
-
-**Target: 2 `run_code_unsafe` calls per task** for simple interactions.
-
-For exploration tasks (building checkpoint maps, multi-page discovery): use as many calls as needed — one call per page or state transition is acceptable. Never batch across state transitions.
-
----
-
-## Context Cleanup
-
-Wrap `newContext` in `try/finally`. Never leave orphaned contexts. One video context at a time.
+## Other
+- Target 2 `run_code_unsafe` calls for simple tasks; more is fine for multi-page exploration
+- Wrap `newContext` in `try/finally`. One video context at a time.

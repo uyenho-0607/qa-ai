@@ -5,7 +5,7 @@ inclusion: manual
 # OTC Mobile App — Domain Knowledge
 
 Search syntax: grep `#tag keyword` to pull only relevant entries.
-Tags: `#screen` `#field` `#error` `#rule` `#flow` `#reuse` `#bo` `#module` `#status` `#scope`
+Tags: `#screen` `#field` `#error` `#rule` `#flow` `#reuse` `#bo` `#module` `#status` `#scope` `#runbook`
 
 ---
 
@@ -45,6 +45,7 @@ Tags: `#screen` `#field` `#error` `#rule` `#flow` `#reuse` `#bo` `#module` `#sta
 
 ## Login
 
+#runbook Login — device operations | env gate, app passcode, OTP fetch, device driving, gotchas | `.claude/domain/login-flow.md` | read when a login must actually be driven, not for spec facts
 #flow    Login | app launch → Splash Screen → Biometric/Passcode unlock (if session exists) OR Email+Password login (no session / session expired) → Home | tickets: AO-304, AO-305, AO-778
 #flow    Forgot Password | Login screen → Email input → OTP verify → Reset Password → Account Recovery → Login screen | ticket: AO-777
 #flow    Logout | Account > Settings → Log Out → confirmation prompt → session ended → Login screen | ticket: AO-865

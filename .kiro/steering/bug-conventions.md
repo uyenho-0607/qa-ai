@@ -61,9 +61,45 @@ State Actual as observed fact. State Expected from the AC or spec — never from
 | **Medium** | Feature partially broken — workaround exists |
 | **Low** | Cosmetic, display issue, no functional impact |
 
+## Target Vocabulary
+
+One vocabulary, shared with the exec plan and `capture-evidence`. Name the target before reproducing; never
+infer it from the module name.
+
+| Target | Driver | Domain file |
+|---|---|---|
+| `bo` | Playwright, desktop | `.kiro/domain/otc-bo.md` |
+| `bo-mv` | Playwright, 390×844 | `.kiro/domain/otc-bo.md` |
+| `ios` / `android` | mobile MCP | `.kiro/domain/otc-mobile.md` |
+| `app-web` | Playwright | `.kiro/domain/otc-mobile.md` |
+
+Rules spanning both surfaces — password policy, OTP, statuses, decimal precision — are in
+`.kiro/domain/otc-shared.md`.
+
+- **Filing a bug:** the target is where the defect was seen. A defect on two targets is one bug naming both,
+  never two bugs.
+- **Verifying a bug:** the target is the one the bug names. Where the bug names none, ask — never assume `bo`.
+- Only Android is verified today; no iOS build exists yet
+  (`.kiro/steering/mobile-mcp-rule.md` § Platform reality). An `ios` target with no device present is
+  reported unavailable, not substituted.
+
 ## Classify FE vs BE
 
-Intercept the network request before classifying. Never guess.
+Never guess. What settles it depends on the target — the tables live in the per-surface section below.
+
+- Ambiguous, on any target → mark as FE and note "classification unconfirmed — needs BE check".
+- An unverifiable classification is stated, never invented.
+
+## Web Targets — Reproduce and Classify
+
+Read this section for `bo`, `bo-mv`, `app-web`, and skip the Device section entirely.
+Follow `.kiro/steering/playwright-rule.md`.
+
+- Start network interception **before** the first navigation. A request already sent cannot be intercepted.
+- Resolve every element from the live DOM; apply § Locator Recovery on a miss.
+- `bo-mv` resizes to 390×844 before navigating.
+
+Classify from the intercepted request:
 
 | BE | FE |
 |---|---|
@@ -72,7 +108,35 @@ Intercept the network request before classifying. Never guess.
 | Unexpected 4xx | Client JS error |
 | Filter/sort param ignored by API | FE applies wrong filter/sort |
 
-Ambiguous → mark as FE and note "classification unconfirmed — needs BE check".
+## Device Targets — Reproduce and Classify
+
+Read this section for `ios`, `android`, and skip the Web section entirely.
+Follow `.kiro/steering/mobile-mcp-rule.md`.
+
+- Reach the start state by terminating and relaunching, never by tapping back through the stack. A reproduce
+  that needs a cleared app also pays the env-gate and passcode setup — see that file § App State Rules.
+- Resolve every element from a current `mobile_list_elements_on_screen` return. Never tap a coordinate no
+  listing returned.
+- **There is no network interception.** The `mobile` server observes no traffic. Collect instead: the backend
+  check for the endpoint the symptom implicates, `mobile_list_crashes`, and the device log — all three per
+  `.kiro/steering/mobile-mcp-rule.md`.
+- Record the repro count. A symptom that appears once in two attempts is intermittent, and the bug says so.
+
+No interception exists, so classify from three independent signals instead:
+
+| Signal | Reads BE | Reads FE |
+|---|---|---|
+| Backend check on the implicated endpoint | endpoint returns the wrong state | endpoint returns the right state |
+| `mobile_list_crashes` | — | a crash new to this run |
+| Device log | server error in the app's lines | client-side exception in the app's lines |
+
+A backend endpoint returning the correct state while the screen shows otherwise is FE. A backend endpoint
+returning the wrong state is BE, and the screen is only corroboration. Where no endpoint in
+`.kiro/locator-cache.json` § `api` covers the symptom, say so — an unverifiable classification is stated,
+never invented.
+
+**A wrong request is undetectable on a device target.** An app sending a bad parameter while the backend
+answers correctly reads as FE with no proof. Note the limitation in the bug rather than asserting a cause.
 
 ## Block vs File Decision
 
@@ -93,3 +157,7 @@ Attach evidence to every bug. Minimum: one screenshot or one video.
 | Static state, missing element, wrong data | Screenshot |
 | Multi-step flow, toast, navigation, state update | Video |
 | API wrong data | Screenshot + network response visible |
+
+One capture per target the bug reproduces on, each into its own file. A device capture carries a sidecar — a
+native frame holds no in-frame label. Naming and paths: `.kiro/skills/capture-evidence/SKILL.md`
+§ File Naming.

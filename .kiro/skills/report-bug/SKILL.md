@@ -12,37 +12,54 @@ description: "Report SIT bugs — classify FE/BE, capture evidence, create subta
    awk '/^## /{p = /Rovo MCP|Transitions|Bug Assignment/} p' .kiro/steering/jira.md
    ```
    Read `project-config.md` for URLs.
-3. Read the domain file for the app under test — `.kiro/domain/otc-bo.md` (Backoffice) or `.kiro/domain/otc-mobile.md` (Android / iOS app) — plus `.kiro/domain/otc-shared.md` for rules spanning both (password policy, OTP, statuses, decimal precision).
+3. Extract the target vocabulary, then the section for the target in hand — **one surface, never both**:
+   ```bash
+   awk '/^## /{p = /Target Vocabulary/} p' .kiro/steering/bug-conventions.md
+   # then, substituting Web or Device for {S}:
+   awk '/^## /{p = /Classify FE vs BE|{S} Targets — Reproduce and Classify|Evidence Rule/} p' \
+     .kiro/steering/bug-conventions.md
+   ```
+4. Read the domain file that § Target Vocabulary names for the target in hand, plus
+   `.kiro/domain/otc-shared.md` for rules spanning both surfaces.
 
 ## Flow
 
 ### 1. Gather Info
 - Parent ticket (required) — bug is "SIT Bug" subtask, never standalone
 - Symptom vs expected behavior
-- Evidence source: Playwright browser
+- **Target** — where the defect was seen, per § Target Vocabulary. Ask; never infer it from the module name. A defect on
+  two targets is one bug naming both.
 
 ### 2. Plan → GATE
 Present and wait for approval:
 ```
 PLAN: Bug under {PARENT}
 Title: [{PROJECT_KEY}][{Module}] {symptom summary}
-App: {OMS/EMS/Backoffice}
+Target: {bo | bo-mv | ios | android | app-web — every one it reproduces on}
 Symptom: {what's wrong}
 Expected: {correct behavior}
-Classification: {API to intercept}
-Evidence: {screenshot/video} — {reasoning}
+Classification: {API to intercept — web} | {endpoint to check, crash and log — device}
+Evidence: {screenshot/video} × {one per target} — {reasoning}
 Duplicate JQL: parent = {PARENT} AND summary ~ "{keyword}"
 ```
 
 ### 3. Execute
 1. Duplicate check → if found, ask user before proceeding
-2. Open browser → reproduce → intercept network (BEFORE navigation)
-3. Classify FE/BE from API evidence → GATE: confirm with user
-4. disclose_context("capture-evidence") — never capture manually
+2. Reproduce on every target in the plan, per its § Reproduce and Classify section — a web target with interception started
+   before the first navigation; a device target collecting the backend check, crashes and the device log,
+   with a repro count
+3. Classify FE/BE per § Classify FE vs BE, using the signals the target actually produced → GATE: confirm
+   with user
+4. disclose_context("capture-evidence") — never capture manually. Pass `targets` (every target it reproduced
+   on), `purpose: bug`, the element and label, and `backend` where a backend check ran
 
 ### 4. Create Bug
 disclose_context("jira-handler") action: `create_bug`
 - summary: `[{PROJECT_KEY}][Module] symptom`
+- Attach every capture `capture-evidence` returned, and the sidecar beside each device capture — the sidecar
+  carries the device, OS version, build and what the frame proves, none of which a native frame shows
+- Name every target the defect reproduced on in the description, with the device identifier or URL and the
+  build per target
 - If wrong evidence → action: `fix_wrong_evidence`
 
 ### 5. Cleanup
@@ -52,6 +69,5 @@ disclose_context("jira-handler") action: `create_bug`
 
 ## Classification & Evidence Rules
 
-```bash
-awk '/^## /{p = /Classify FE vs BE|Evidence Rule/} p' .kiro/steering/bug-conventions.md
-```
+Already in hand from Pre-Flight step 3 — the shared § Classify FE vs BE, the § for this target's surface, and
+§ Evidence Rule. Do not re-extract, and never read the other surface's section.

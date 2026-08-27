@@ -4,6 +4,8 @@ jira==3.10.5
 
 # ─── Google Sheets ──────────────────────────────────────────────────────────
 # Used by: collect-gsheet-cases (fetch_gsheet_tcs.py → import requests)
+#          scripts/mailtm_otp.py (mail.tm REST API for OTP fetching)
+#          scripts/mailinator_otp.py (Mailinator public-inbox API for OTP fetching)
 # Note: uses raw HTTP to Sheets API — no gspread needed
 requests==2.32.3
 
