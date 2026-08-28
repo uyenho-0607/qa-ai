@@ -101,7 +101,7 @@ State the resume plan per target, and the Preflight results, before executing.
 ```
 
 **Output:** `exec.md` with no result cell left `PENDING`; `evidence/{KEY}/` — one verified file per group or
-checkpoint per target, plus a sidecar wherever the rules require one; `report.md` with a Summary row per
+checkpoint per target, and no `.md` beside any of them; `report.md` with a Summary row per
 target, Target Differences, AC Coverage, Bugs Found, and a Failed & Blocked Details entry per failure carrying
 its repro count, backend check, crash or console error, and log lines.
 
@@ -193,10 +193,9 @@ Carried from the 2026-08-24 mobile build log, still open:
   `.claude/steering/mobile-mcp-rule.md` § Backend Verification Rules for why interception was rejected.
 - **Device targets run sequentially, not in parallel.** One device to completion before the next — roughly
   doubles wall-clock against a web-only run.
-- **Sidecar timestamps are hand-recorded.** The agent notes the elapsed second each checkpoint lands on during
-  replay; nothing verifies a range against the video. A wrong range is a silently wrong sidecar.
-- **Mobile lessons have no home.** `.claude/docs/lessons.md` carries Playwright and EMS Trader lessons that do
-  not apply to device targets. Add a mobile section on the first real device run.
+- **Recording timestamps are hand-recorded.** The agent notes the elapsed second each checkpoint lands on
+  during replay and writes it into the TC's result note; nothing verifies a range against the video. A wrong
+  range is a silently wrong note.
 
 ## Prerequisites
 

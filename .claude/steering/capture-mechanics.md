@@ -56,25 +56,24 @@ puts the agent's own latency into the video.
 `{TC-ID} | c{N} | {what is being verified}` — a one-off capture uses the caller's label instead.
 
 `bo`, `bo-mv` and `app-web` are a DOM and take an injected overlay: the label goes in the frame, clear of the
-elements it marks. `ios` and `android` are a native screen and take none: the sidecar carries the same text.
+elements it marks. `ios` and `android` are a native screen and take none, so a device capture is attributed by
+its file name alone.
 
-## Sidecar
+## No sidecars
 
-A `.md` beside the capture, same basename, naming what the capture shows. **Required** for every capture on
-`ios` or `android`, and for every capture in `screenshot` mode. Optional elsewhere. Write it immediately
-after the capture.
+**Never write a `.md` beside a capture.** `evidence/{KEY}/` holds `.png` and `.mp4` files and nothing else.
 
-```
-Target: {target} · {device identifier or URL} · {OS version} · build {build}
-c1 | 00:00–00:07 | {assertion text, verbatim} | observed: {what was seen}
-c2 | 00:07–00:14 | {assertion text, verbatim} | observed: {what was seen}
-Backend: {METHOD path → status, compared values}
-```
+What a capture shows is carried by two things that already exist:
 
-- A frame's lines carry no timestamps. A recording's carry one elapsed range per moment, read off the
-  recording and never off the plan.
-- An exec run keys each line by its checkpoint id. A one-off capture keys it by the caller's label, one line.
-- `Backend:` appears only where a backend check ran.
+- **The file name.** The stem encodes the TC id, the checkpoint ids and the target, so a file is attributable
+  without opening anything beside it.
+- **The caller's own record.** An exec run's `**R@{target}:**` note in `exec.md` carries observed-vs-expected,
+  the repro count, the backend check, and any crash or console error — and `report.md` § Failed & Blocked
+  Details repeats it per failure. A one-off capture returns the same facts to its caller.
+
+Never let a fact reach only a capture. Anything a reader would need — the assertion text, what was observed,
+the backend check, the elapsed second a failure lands on in a recording — goes in the result note, because the
+capture is corroboration and the note is the record.
 
 ## Verify
 

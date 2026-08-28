@@ -102,7 +102,7 @@ This file is what `report-bug` and the Testmo write-back read. Neither re-opens 
 **Backend:** {status and compared field values | not checked}
 **Crash / console:** {crash ID and summary | console error | none}
 **Log:** {the lines naming the app under test | none}
-**Evidence:** `evidence/{KEY}/{filename}` {and its sidecar, where one exists}
+**Evidence:** `evidence/{KEY}/{filename}`
 **Bug:** {BUG-KEY | not filed | not a defect — {why}}
 
 ---

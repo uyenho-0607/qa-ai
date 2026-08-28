@@ -11,7 +11,7 @@ already knows what it wants shown.
 ## Pre-Flight
 
 ⛔ **FORCE READ:** `.kiro/steering/capture-mechanics.md` — it owns the path, the file-name shape, the
-label, the sidecar and the verification — then its row for the requested target, and no other row.
+label and the verification — then its row for the requested target, and no other row.
 
 The caller names the target; this skill never guesses it. Only Android is verified today — no iOS build
 exists yet (`.kiro/steering/mobile-mcp-rule.md` § Platform reality). An `ios` request with no device
@@ -43,8 +43,7 @@ For a backend finding:
 
 **Output:**
 ```
-file_paths:    ["evidence/AO-925/AO-925_bug_1_android.png"]
-sidecar_paths: ["evidence/AO-925/AO-925_bug_1_android.md"]
+file_paths: ["evidence/AO-925/AO-925_bug_1_android.png"]
 ```
 
 ## Stem
@@ -72,8 +71,9 @@ Per requested target, in order:
    resolves at no tier is reported back to the caller unaddressable, together with a capture of the screen it
    sits on.
 4. **Capture**, per this target's mechanics file and the `type`.
-5. **Write the sidecar and verify the capture**, per `capture-mechanics.md`.
-6. **Report the paths.**
+5. **Verify the capture**, per `capture-mechanics.md`. Write no `.md` beside it.
+6. **Report the paths**, together with what each capture shows — the caller records that, not a file in
+   `evidence/{KEY}/`.
 
 ## Hard Rules
 

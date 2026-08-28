@@ -7,22 +7,26 @@ description: Execute exec.md, the manual SIT plan, on every target it names — 
 
 - **Args:** `{KEY}` [, `finalise`] — e.g. `AO-925`
 - **Reads:** `tasks/{KEY}/exec.md`
-- **Writes:** `tasks/{KEY}/exec.md` (result lines, in place), `tasks/{KEY}/report.md`, evidence and sidecars to `evidence/{KEY}/` — the paths `.kiro/steering/project-config.md` § Folder Structure fixes
+- **Writes:** `tasks/{KEY}/exec.md` (result lines, in place), `tasks/{KEY}/report.md`, evidence to `evidence/{KEY}/` — the paths `.kiro/steering/project-config.md` § Folder Structure fixes
 - **With `finalise`:** run Phase 4 alone — backfill filed bug keys into the existing `report.md`
 - **Missing input:** STOP and name the producer. No `exec.md` → `/manual-exec-design {KEY}`; never build one here, and never run it from here. `finalise` with no `report.md` → STOP: Phases 1–3 have not run.
 
-**Loads, at Phase 2 and not before:** `.kiro/steering/capture-mechanics.md`, plus the row it gives each
-target kind the plan actually runs — a driver rule and a capture file — and no other row. Phase 1 reads
-nothing but `exec.md`.
+**Loads, at Phase 2 and not before:** `.kiro/docs/lessons.md`, `.kiro/steering/capture-mechanics.md`,
+plus the row it gives each target kind the plan actually runs — a driver rule and a capture file — and no
+other row. Phase 1 reads nothing but `exec.md`.
 
 ## Rules
 
 - **The plan decides.** Never re-derive a target, surface, evidence mode, grouping, wave order, step, value or
-  checkpoint that `exec.md` states.
+  checkpoint that `exec.md` states. One exception: a wave whose precondition is a state a *later* wave creates
+  may run just after that wave, restoring the state afterwards — that beats a `BLOCKED` the run could have
+  cleared itself. Never reorder on a guess about data; log the move and the restore in the result line.
 - A result is decided by its assertion, never by whether evidence was captured.
 - One result per entry in a TC's `**Tgt:**` — one per pair on a `bo+app` TC.
-- Resolve every target string from a fresh DOM query or element listing immediately before acting on it.
-  A coordinate is never a target string; where one is unavoidable, `mobile-mcp-rule.md` § Element Resolution
+- Resolve every target string from a fresh DOM query or element listing immediately before acting on it,
+  in one call or many. Batch a multi-field screen into one script per `mobile-mcp-rule.md` § Element
+  Resolution Rules.
+- A coordinate is never a target string; where one is unavoidable, `mobile-mcp-rule.md` § Element Resolution
   Rules states the only case that allows it.
 - Take every input value from `**Data:**`. Never invent one.
 - A difference between two targets is a finding, not a variant to normalise. Record both observations.
@@ -120,8 +124,8 @@ its checkpoint id. On a `bo+app` TC assert each checkpoint in the session its ta
 open.
 
 In `screenshot` mode the checkpoint's frame is captured **here**, at the assertion moment, under the stem its
-Checkpoint Evidence row carries — then its sidecar is written and the frame verified, per
-`.kiro/steering/capture-mechanics.md`. The result still comes from the observed fact, never from the frame.
+Checkpoint Evidence row carries — then the frame is verified, per `.kiro/steering/capture-mechanics.md`. No
+`.md` is written beside it. The result still comes from the observed fact, never from the frame.
 
 On a failed assertion, before writing the result:
 
@@ -163,10 +167,11 @@ none needed. Continue to the next TC whatever this TC's result.
 
 `normal` mode: once the whole group has been tested, replay it once per target into the capture its Evidence
 Groups row states — its type, its stem, and `**Cap:**` for the moment each checkpoint must show. Write the
-file and its sidecar per `.kiro/steering/capture-mechanics.md`, then verify it there.
+file per `.kiro/steering/capture-mechanics.md`, then verify it there. Write no `.md` beside it — the elapsed
+second each checkpoint lands on goes in this TC's result note.
 
-Done when: every file and sidecar the plan names for this group and this target exists at its derived path
-and shows its asserted state.
+Done when: every file the plan names for this group and this target exists at its derived path and shows its
+asserted state.
 
 ### Per wave
 
@@ -185,6 +190,7 @@ Notes; a crash or an app-side error on a failing TC is FE evidence for `report-b
 | A capture fails or cannot be verified | re-capture once; still failing → note it in the result. The result never changes. |
 | The app crashes mid-TC | `FAILED` carrying the crash ID; re-apply the wave's `Reset` before the next TC |
 | The wave's state cannot be recovered | the wave's remaining TCs on that target → `BLOCKED`, naming the cause. The next wave still runs. |
+| A wave's precondition is a state a later wave creates | run it just after that wave and restore the state; log the move and the restore in the result line. Never reorder on a guess about data. |
 | Context is lost or compacted mid-run | re-read the header, re-index, re-slice the current group. Never read the file whole, never resume from memory of a block. |
 | `finalise` finds no `report.md` | STOP — Phases 1–3 have not run |
 
@@ -192,7 +198,8 @@ Notes; a crash or an app-side error on a failing TC is FE evidence for `report-b
 
 1. Re-read the index. A line still `PENDING` never ran: run it, or write `BLOCKED` with the reason it did not.
    Then regenerate `exec.md` § Results Summary from the result lines — once, here, and nowhere else.
-2. `ls evidence/{KEY}/` — confirm every file and sidecar the plan names is there. Note any that is missing.
+2. `ls evidence/{KEY}/` — confirm every file the plan names is there, and that nothing else is. Note any that
+   is missing.
 3. Write `tasks/{KEY}/report.md` from `REPORT.md`, filling every section it defines. Its content comes from
    three places already in hand: the exec header (Metadata, Preflight § Targets, AC Coverage, Skipped), the
    index (TC Results, and Executed At from the earliest and latest result timestamps), and the result notes
@@ -201,7 +208,10 @@ Notes; a crash or an app-side error on a failing TC is FE evidence for `report-b
    Caused by the environment, the data, or the plan → the entry alone, carrying the reason it is not a defect.
 5. Build Target Differences by comparing the per-target notes of every TC that ran on more than one target. A
    single-target run writes *None*.
-6. Present the Summary table, Bugs Found, Target Differences, and every failed or blocked TC.
+6. A reusable lesson the run turned up — a locator that moved, a fixture that lies, an env quirk that cost a
+   re-run → append one bullet to `.kiro/docs/lessons.md` with `{KEY}` and the date. A lesson a rule file
+   already owns goes in that rule file instead, per that file's header. Nothing reusable → skip.
+7. Present the Summary table, Bugs Found, Target Differences, and every failed or blocked TC.
 
 Done when: `report.md` is complete, no result line is still `PENDING`, every AC carries a result, every
 failure carries its repro count and backend check, and every failure sits either under Bugs Found or with the

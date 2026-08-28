@@ -84,7 +84,7 @@ One frame may prove several checkpoints, of one TC or of several. Share it when 
 - Every checkpoint it covers is visible at the same instant, without scrolling
 - All of them hold in the same state, on the same screen
 - Each is attributable from the capture — the in-frame label where the target's pack declares the overlay
-  available, the sidecar where it does not
+  available, the file name where it does not
 - Failure in one does not make another's assertion ambiguous
 
 Split into separate frames when any of those fails.

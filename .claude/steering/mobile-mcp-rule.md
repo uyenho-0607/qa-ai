@@ -34,6 +34,11 @@ identifiers, `android` for commands and measured taps. One key at a time:
 
 - **Never tap a coordinate no current listing returned**, unless it is a cached tap whose stamped
   resolution matches the live device. A guessed tap in a mutating flow is a false result, not a test.
+- **Batch inside one call.** This rule limits device reads, not agent turns. Drive a multi-field screen from
+  one script — dump, parse, tap, type per field — so every action still gets its fresh listing. One call per
+  field costs an order of magnitude more wall clock than the same reads batched.
+- Assert each typed value inside that script and abort naming the field that mismatched. Batching without the
+  check turns a keyboard-shifted coordinate into silent wrong data.
 - A target resolving at no tier — no `id`, no `desc`, no `text` — blocks its TC. Name the element, its
   screen, and the `testID` the app team must add. A node carrying a `testID` and no visible text is
   addressable, not blocked.

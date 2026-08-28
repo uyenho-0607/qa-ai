@@ -108,6 +108,11 @@ Classify from the intercepted request:
 | Unexpected 4xx | Client JS error |
 | Filter/sort param ignored by API | FE applies wrong filter/sort |
 
+**Error copy is classified by injection, not by comparison.** A stubbed failure carrying a nonsense
+`message` — `{code:500, message:'ZZZ-PROBE-MESSAGE'}` — that reaches the screen verbatim proves the FE
+echoes server copy; a screen showing its own constant instead proves the FE owns it. Inject two bodies,
+one with the nonsense `message` and one with none, before writing up any error-copy failure. (AO-925)
+
 ## Device Targets — Reproduce and Classify
 
 Read this section for `ios`, `android`, and skip the Web section entirely.
@@ -158,6 +163,6 @@ Attach evidence to every bug. Minimum: one screenshot or one video.
 | Multi-step flow, toast, navigation, state update | Video |
 | API wrong data | Screenshot + network response visible |
 
-One capture per target the bug reproduces on, each into its own file. A device capture carries a sidecar — a
-native frame holds no in-frame label. Naming and paths: `.kiro/skills/capture-evidence/SKILL.md`
-§ File Naming.
+One capture per target the bug reproduces on, each into its own file, and no `.md` beside it. A device capture
+holds no in-frame label, so its file name is what attributes it, and the bug's own Steps and Actual Result carry
+what it shows. Naming and paths: `.kiro/skills/capture-evidence/SKILL.md` § File Naming.

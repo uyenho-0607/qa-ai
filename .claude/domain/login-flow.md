@@ -1,7 +1,3 @@
----
-inclusion: manual
----
-
 # BFG OTC App — Login Flow (runbook; Android verified)
 
 Source: live walk-through on an Android emulator, 2026-08-26.
@@ -175,9 +171,16 @@ CUTOFF=$(python3 -c "import time;print(int(time.time()*1000))")
 Sender is `aqxotc-sit@s20ip12.com`, subject `BFG OTC Verification Code`, **valid 5 minutes**.
 Resend is locked behind a 60s countdown.
 
+`--after "$CUTOFF"` is not optional. The inbox carries several subjects — a bank-account OTP arrives as
+`Verify Your Request to Add a Bank Account` — so `--sender` alone still returns a stale code. Without the
+cutoff, `otp` returned two stale codes on 2026-08-27 and cost 193s.
+
 Entering it: the six `otp-cell-{n}` nodes are **not clickable**. Tap cell 0 to focus the hidden
 input, then send all six digits in one `input text` — they auto-advance and the screen
-self-submits on the sixth.
+self-submits on the sixth. Count the filled cells afterwards — but **zero cells means the screen
+advanced**, not that entry failed: a correct code leaves nothing to count. Test for the advance, or
+the error text, before calling it a failure. Five cells means a freshly focused field dropped the
+leading digit (2026-08-27) — clear with `keyevent 67` and send digit-by-digit.
 
 ---
 

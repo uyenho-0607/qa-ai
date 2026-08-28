@@ -35,6 +35,11 @@ Priority: `data-testid` → `role+name` → CSS → text
 Never batch multiple inputs without intermediate state verification.
 
 ## Locator Recovery
+0. **A stale overlay is not a missing element.** Ant Design leaves closed dropdowns, modals and drawers in
+   the DOM. A locator that "resolves but is not visible" is matching a stale one — scope to the live node
+   (`.ant-dropdown:not(.ant-dropdown-hidden) …`, or filter `[role=dialog]` by `getBoundingClientRect().width > 0`)
+   rather than raising the timeout. Note that a fixed-position drawer has `offsetParent === null`, so that is
+   not a visibility test.
 1. Try `data-testid` from cache
 2. Try `role` + accessible name
 3. Try CSS

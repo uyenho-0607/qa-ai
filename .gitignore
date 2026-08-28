@@ -10,3 +10,5 @@ venv/
 .playwright-mcp
 # Jira attachment staging (download-jira-attachments.sh)
 .tmp/
+app-release.apk
+app-release.apk

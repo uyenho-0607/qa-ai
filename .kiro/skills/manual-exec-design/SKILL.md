@@ -153,6 +153,10 @@ Reconcile against the written file:
 - Every included TC carries one `**R@…:**` line per entry in its `**Tgt:**`, and no more.
 - Every included TC has a Results Summary row whose every non-`N/A` cell reads `PENDING`.
 - Every Preflight § Data row names the TCs that need it.
+- Every Target Inventory row carries a resolved target string and an occurrences count. A row that cannot —
+  the element is unreachable until Preflight § Data is satisfied — names its blocker and the wave that
+  re-scans it. An element with no `id`, no `desc` and no unique `text` belongs in Unaddressable Elements.
+  Never a placeholder carrying neither.
 
 Resolve every mismatch before presenting.
 

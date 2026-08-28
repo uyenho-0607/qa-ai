@@ -53,8 +53,8 @@ at once, so it is never a per-platform ask.
 
 ## Label overlay
 
-- `ios`, `android` — **unavailable.** A native screen takes no injected overlay, so every capture there
-  carries a sidecar, and the sidecar is what attributes it.
+- `ios`, `android` — **unavailable.** A native screen takes no injected overlay, so a capture there is
+  attributed by its file name, and by the result note the caller writes for it.
 - `app-web` — **available.** It is a DOM.
 
 ## State reset

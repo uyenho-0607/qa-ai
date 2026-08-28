@@ -56,8 +56,9 @@ Duplicate JQL: parent = {PARENT} AND summary ~ "{keyword}"
 ### 4. Create Bug
 Invoke the `jira-handler` skill action: `create_bug`
 - summary: `[{PROJECT_KEY}][Module] symptom`
-- Attach every capture `capture-evidence` returned, and the sidecar beside each device capture — the sidecar
-  carries the device, OS version, build and what the frame proves, none of which a native frame shows
+- Attach every capture `capture-evidence` returned, and nothing else — never a `.md` beside one
+- A native frame shows no device, OS version, build, or statement of what it proves. Write all four into the
+  description itself, per capture, so an attachment is never the only place a fact lives
 - Name every target the defect reproduced on in the description, with the device identifier or URL and the
   build per target
 - If wrong evidence → action: `fix_wrong_evidence`

@@ -1,7 +1,7 @@
 # Capture — Web Targets
 
 Targets: `bo`, `bo-mv`, `app-web`. Driver: Playwright, per `.claude/steering/playwright-rule.md`.
-Naming, labels, sidecars, timing and verification: `.claude/steering/capture-mechanics.md`. This file is the
+Naming, labels, timing and verification: `.claude/steering/capture-mechanics.md`. This file is the
 Playwright mechanics for those rules, and nothing else.
 
 **Every path is repo-relative.** `page.screenshot({ path })` and `recordVideo.dir` resolve against the

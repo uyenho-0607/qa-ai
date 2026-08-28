@@ -53,7 +53,8 @@ Evidence: {type} x{count}, one per target
 ### 4. Post Comment
 disclose_context("jira-handler") action: `post_verification`
 - State the result per target, and name the device identifier or URL and the build for each
-- Attach the sidecar beside every device capture
+- Attach captures only — never a `.md` beside one. State the device, OS version, build and what each capture
+  shows in the comment itself
 - If wrong → action: `fix_wrong_comment`
 
 ### 5. Transition

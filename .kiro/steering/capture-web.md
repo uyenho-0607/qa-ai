@@ -5,7 +5,7 @@ inclusion: manual
 # Capture — Web Targets
 
 Targets: `bo`, `bo-mv`, `app-web`. Driver: Playwright, per `.kiro/steering/playwright-rule.md`.
-Naming, labels, sidecars, timing and verification: `.kiro/steering/capture-mechanics.md`. This file is the
+Naming, labels, timing and verification: `.kiro/steering/capture-mechanics.md`. This file is the
 Playwright mechanics for those rules, and nothing else.
 
 **Every path is repo-relative.** `page.screenshot({ path })` and `recordVideo.dir` resolve against the
