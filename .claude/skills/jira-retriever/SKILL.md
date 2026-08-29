@@ -10,9 +10,9 @@ Fetch everything a Jira ticket contains. Done when all content is captured and e
 ## Contract
 
 - **Arg:** `{KEY}` [, `save`]
-- **Writes:** `tasks/{KEY}/jira.md` — **only when `save` is given**
+- **Writes:** `tasks/{KEY}/base/jira.md` — **only when `save` is given**
 - **Default:** return the Output block below in chat; write no file
-- **Attachments:** always `tasks/{KEY}/attachments/`, regardless of `save`
+- **Attachments:** always `tasks/{KEY}/base/attachments/`, regardless of `save`
 
 ## Steps
 
@@ -59,7 +59,7 @@ Extraction only — never fetch design content here. `figma-retriever` owns that
 
 ## Output
 
-Both paths use the structure below. `save` → write it to `tasks/{KEY}/jira.md` without showing the content in chat, then say "Written to `tasks/{KEY}/jira.md` — check it and flag anything to update." No `save` → return it in chat.
+Both paths use the structure below. `save` → write it to `tasks/{KEY}/base/jira.md` without showing the content in chat, then say "Written to `tasks/{KEY}/base/jira.md` — check it and flag anything to update." No `save` → return it in chat.
 
 ```markdown
 # Jira: [KEY]

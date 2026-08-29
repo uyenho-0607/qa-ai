@@ -30,7 +30,7 @@ Start here. Everything else is invoked by one of these.
 | Skill | Invoke with | What it does | Writes |
 |---|---|---|---|
 | `generate-tcs` | "generate TCs for AO-306" | Scope ACs/BRs/error messages → coverage plan → grill → write TCs → review → export (CSV / Google Sheet / Testmo) | `tc-plan.md`, `manual-tcs.md`, export target |
-| `report-bug` | "/bug", "report this bug" | Classify FE/BE, capture evidence, create a SIT Bug subtask under the parent | Jira subtask + `evidence/{KEY}/` |
+| `report-bug` | "/bug", "report this bug" | Classify FE/BE, capture evidence, create a SIT Bug subtask under the parent | Jira subtask + `tasks/{KEY}/exec/evidence/` |
 | `verify-bug` | "/verify-bugs-batch", "verify this fix" | Reproduce the STR, capture evidence, post the verification comment, transition the ticket | Jira comment + transition |
 | `ui-discovery` | "explore this page", "map this feature" | Drive the live app and map workflows, values, validation, permissions, state transitions | Checkpoint Map + `.claude/domain/` flow file |
 | `git-workflow` | "/branch", "/push", "/rebase", "/pr" | Branch → stage/push → rebase → GitHub PR for QA task files | branch, commits, PR |

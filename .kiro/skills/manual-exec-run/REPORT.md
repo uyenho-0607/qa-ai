@@ -1,6 +1,6 @@
 # The shape of `report.md`
 
-Phase 3 writes `tasks/{KEY}/report.md` to the shape below, and Phase 4 completes it. Every section is
+Phase 3 writes `tasks/{KEY}/exec/report.md` to the shape below, and Phase 4 completes it. Every section is
 required; a section with nothing in it reads *None* rather than being dropped.
 
 This file is what `report-bug` and the Testmo write-back read. Neither re-opens `exec.md`.
@@ -16,7 +16,7 @@ This file is what `report-bug` and the Testmo write-back read. Neither re-opens 
 - Environment: {SIT | UAT}
 - **Evidence mode:** {normal | screenshot}
 - Executed At: {earliest result timestamp} – {latest result timestamp}
-- Exec file: `tasks/{KEY}/exec.md`
+- Exec file: `tasks/{KEY}/exec/exec.md`
 - Environment deviations: {carried from exec.md, or "none"}
 
 | Target | Device / URL | OS / viewport | Build |
@@ -66,6 +66,8 @@ This file is what `report-bug` and the Testmo write-back read. Neither re-opens 
 
 > Candidate defects from this run. Not filed — raise them with `report-bug` after review. One row per
 > defect, naming every target it reproduced on; a defect seen on one target only is still one row.
+> **This table is the only place in `report.md` that carries a bug key.** Every other section refers to the
+> TC, so Phase 4 fills one row and nothing else.
 
 | TC | Targets | Description | Repro | Backend | Evidence | Bug |
 |---|---|---|---|---|---|---|
@@ -79,12 +81,12 @@ This file is what `report-bug` and the Testmo write-back read. Neither re-opens 
 
 > One status column per target, `N/A` where the TC's surface cannot reach it. Evidence is the name derived
 > from the plan — never a renamed copy. An Added Coverage TC carries `—` for its Case ID; the Testmo
-> write-back asks before creating a case for it.
+> write-back asks before creating a case for it. A failing TC's bug key sits in Bugs Found, not here.
 
-| TC | Case ID | Title | {target} | {target} | Bug | Evidence |
-|---|---|---|---|---|---|---|
-| TC-01 | {case id} | {title} | PASSED | PASSED | — | {filename} |
-| TC-02 | {case id} | {title} | FAILED | N/A | {BUG-KEY} | {filename} |
+| TC | Case ID | Title | {target} | {target} | Evidence |
+|---|---|---|---|---|---|
+| TC-01 | {case id} | {title} | PASSED | PASSED | {filename} |
+| TC-02 | {case id} | {title} | FAILED | N/A | {filename} |
 
 ---
 
@@ -102,8 +104,8 @@ This file is what `report-bug` and the Testmo write-back read. Neither re-opens 
 **Backend:** {status and compared field values | not checked}
 **Crash / console:** {crash ID and summary | console error | none}
 **Log:** {the lines naming the app under test | none}
-**Evidence:** `evidence/{KEY}/{filename}`
-**Bug:** {BUG-KEY | not filed | not a defect — {why}}
+**Evidence:** `tasks/{KEY}/exec/evidence/{filename}`
+**Verdict:** {defect — see Bugs Found | not a defect — {why}}
 
 ---
 

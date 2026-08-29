@@ -18,7 +18,7 @@ Follow the surface pack for each surface in play.
 2. **Confirm the deltas only.** Visit each screen once per target. A cached target the live screen returns
    needs no rescan — its source is `locator-cache`. A cached target the screen contradicts is a stale-cache
    finding: correct the entry in `.claude/locator-cache.json`, and carry it to the gate.
-3. **Screenshot each screen per target**, to `tasks/{KEY}/recon/{screen}_{target}.png`.
+3. **Screenshot each screen per target**, to `tasks/{KEY}/exec/recon/{screen}_{target}.png`.
 4. **Record every element the TC steps touch** into Target Inventory — screen, container, element, target
    string, occurrences, per-target presence, source. An element with no `id=`, no `desc=` and no unique
    `text=` goes to Unaddressable Elements instead, with the TCs it blocks and the fix its pack states.

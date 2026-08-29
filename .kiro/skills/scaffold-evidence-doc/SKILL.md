@@ -25,7 +25,7 @@ Case names come from the repository, not from a run: `testmo_list_run_results` r
 
 ## 1. Collect case names
 
-`tasks/{KEY}/tc.md` exists → read the names from its `## ` headings and skip the Testmo call. Those headings read `{KEY}_TC-NN — {name}`; keep only the part after the em dash.
+`tasks/{KEY}/base/tc.md` exists → read the names from its `## ` headings and skip the Testmo call. Those headings read `{KEY}_TC-NN — {name}`; keep only the part after the em dash.
 
 Otherwise resolve `{KEY}`'s project id from `.kiro/steering/testmo.md` and call `testmo_find_cases_by_issue(projectId, issueKey: "{KEY}")`. Parse every `"<caseId> <caseName>"` entry, keeping its folder grouping and the response's order.
 
@@ -35,7 +35,7 @@ No cases returned → report that and stop. Offer `collect-testmo-cases` or a fo
 
 ## 2. Confirm scope
 
-Platform tags come from the TC set, not from a guess: read the `Configuration` values in `tasks/{KEY}/manual-tcs.md` when it exists, and propose every distinct value. A set spanning platforms keeps all of them — `Android app; iOS app` is one valid tag, not a choice between two. Every name must match `.kiro/steering/testmo.md`.
+Platform tags come from the TC set, not from a guess: read the `Configuration` values in `tasks/{KEY}/gen/manual-tcs.md` when it exists, and propose every distinct value. A set spanning platforms keeps all of them — `Android app; iOS app` is one valid tag, not a choice between two. Every name must match `.kiro/steering/testmo.md`.
 
 Present the folder groups and the total, then ask in one message:
 
@@ -52,7 +52,7 @@ Scaffold the doc? (yes / adjust)
 Title: `[{KEY}] {Jira summary} ({Platform tag})`
 Example: `[AO-306] [OTC][MobileApp] Personal Onboarding (Android app; iOS app)`
 
-Take the summary from the `## Title` line of `tasks/{KEY}/jira.md` when it exists; otherwise invoke `jira-retriever` with `{KEY}`.
+Take the summary from the `## Title` line of `tasks/{KEY}/base/jira.md` when it exists; otherwise invoke `jira-retriever` with `{KEY}`.
 
 One `createDocument` call carries the whole scaffold:
 

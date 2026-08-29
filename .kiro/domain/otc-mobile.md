@@ -1,7 +1,3 @@
----
-inclusion: manual
----
-
 # OTC Mobile App — Domain Knowledge
 
 Search syntax: grep `#tag keyword` to pull only relevant entries.

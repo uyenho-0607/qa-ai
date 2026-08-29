@@ -5,7 +5,7 @@ description: Snapshot Figma design content into a structured markdown file + PNG
 
 # Figma Retriever
 
-UI/UX design analyst for QA. Extract Figma structure, write a frozen design snapshot, and download PNG screenshots. Downstream skill: `generate-tcs` references `figma-snapshot.md` via `tasks/{KEY}/attachments/`.
+UI/UX design analyst for QA. Extract Figma structure, write a frozen design snapshot, and download PNG screenshots. Downstream skill: `generate-tcs` references `figma-snapshot.md` via `tasks/{KEY}/base/attachments/`.
 
 ## Input
 

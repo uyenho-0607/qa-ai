@@ -6,8 +6,8 @@ description: Build exec.md, the manual SIT execution plan, from jira.md and tc.m
 ## Contract
 
 - **Args:** `{KEY}` [, `targets={list}`] [, `evidence={normal|screenshot}`] — e.g. `AO-925 targets=ios,android`
-- **Reads:** `tasks/{KEY}/jira.md`, `tasks/{KEY}/tc.md`
-- **Writes:** `tasks/{KEY}/exec.md`, recon screenshots to `tasks/{KEY}/recon/`, verified locators to `.claude/locator-cache.json`
+- **Reads:** `tasks/{KEY}/base/jira.md`, `tasks/{KEY}/base/tc.md`
+- **Writes:** `tasks/{KEY}/exec/exec.md`, recon screenshots to `tasks/{KEY}/exec/recon/`, verified locators to `.claude/locator-cache.json`
 - **Missing input:** STOP and name the producer — `jira.md` ← `/fetch-jira {KEY}` with `save`; `tc.md` ← `/collect-testmo {KEY}` with `save`, or `/collect-gsheet`. Never fall back to Jira MCP or to chat context, and never run the producer from here.
 - **`exec.md` exists:** ask — overwrite (rebuild from Phase 1), reuse (keep the file, run no phases), or abort. Never clobber a file holding execution results.
 
@@ -34,9 +34,9 @@ Done when: the target list is fixed and written down.
 
 ## Phase 2 — Read the inputs
 
-- `tasks/{KEY}/jira.md` — the affected module, and every specified behaviour including implicit constraints.
+- `tasks/{KEY}/base/jira.md` — the affected module, and every specified behaviour including implicit constraints.
   Number every acceptance criterion `AC-1`, `AC-2`, … .
-- `tasks/{KEY}/tc.md` — every TC with its case ID, title, steps and expected result.
+- `tasks/{KEY}/base/tc.md` — every TC with its case ID, title, steps and expected result.
 
 Done when: the module is recorded, every AC carries a number, and every TC is listed with the case ID
 `tc.md` gave it.
@@ -126,7 +126,7 @@ Done when: every TC carries a `**Mut:**` mark, every group and solo TC sits in a
 
 ## Phase 9 — Write `exec.md`
 
-Write `tasks/{KEY}/exec.md` from `TEMPLATE.md`. It is the single authority on every section and every field the file carries; fill each one from the phase that built it:
+Write `tasks/{KEY}/exec/exec.md` from `TEMPLATE.md`. It is the single authority on every section and every field the file carries; fill each one from the phase that built it:
 
 | Section | Built by |
 |---|---|

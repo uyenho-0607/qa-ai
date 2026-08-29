@@ -23,4 +23,4 @@ Env values, credentials, `tasks/{KEY}/` layout, Jira and Testmo ids: read `.clau
 ## Repo
 
 - `.claude/` is the source. After editing it, run `python3 sync-kiro.py` to regenerate `.kiro/`.
-- `tasks/`, `evidence/`, `reports/` are tracked, not ignored. Stage by explicit path.
+- `tasks/`, `reports/` are tracked, not ignored. Stage by explicit path.

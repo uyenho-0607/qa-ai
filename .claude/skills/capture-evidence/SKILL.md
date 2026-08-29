@@ -73,7 +73,7 @@ Per requested target, in order:
 4. **Capture**, per this target's mechanics file and the `type`.
 5. **Verify the capture**, per `capture-mechanics.md`. Write no `.md` beside it.
 6. **Report the paths**, together with what each capture shows — the caller records that, not a file in
-   `evidence/{KEY}/`.
+   `tasks/{KEY}/exec/evidence/`.
 
 ## Hard Rules
 

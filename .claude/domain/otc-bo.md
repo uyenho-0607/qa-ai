@@ -1,6 +1,3 @@
----
-inclusion: manual
----
 
 # OTC Back Office — Domain Knowledge
 

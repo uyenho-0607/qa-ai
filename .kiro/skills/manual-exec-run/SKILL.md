@@ -6,9 +6,9 @@ description: Execute exec.md, the manual SIT plan, on every target it names — 
 ## Contract
 
 - **Args:** `{KEY}` [, `finalise`] — e.g. `AO-925`
-- **Reads:** `tasks/{KEY}/exec.md`
-- **Writes:** `tasks/{KEY}/exec.md` (result lines, in place), `tasks/{KEY}/report.md`, evidence to `evidence/{KEY}/` — the paths `.kiro/steering/project-config.md` § Folder Structure fixes
-- **With `finalise`:** run Phase 4 alone — backfill filed bug keys into the existing `report.md`
+- **Reads:** `tasks/{KEY}/exec/exec.md`
+- **Writes:** `tasks/{KEY}/exec/exec.md` (result lines, in place), `tasks/{KEY}/exec/report.md`, evidence to `tasks/{KEY}/exec/evidence/` — the paths `.kiro/steering/project-config.md` § Folder Structure fixes
+- **With `finalise`:** run Phase 4 alone — backfill filed bug keys into the existing `report.md` and `exec.md`
 - **Missing input:** STOP and name the producer. No `exec.md` → `/manual-exec-design {KEY}`; never build one here, and never run it from here. `finalise` with no `report.md` → STOP: Phases 1–3 have not run.
 
 **Loads, at Phase 2 and not before:** `.kiro/docs/lessons.md`, `.kiro/steering/capture-mechanics.md`,
@@ -18,9 +18,7 @@ other row. Phase 1 reads nothing but `exec.md`.
 ## Rules
 
 - **The plan decides.** Never re-derive a target, surface, evidence mode, grouping, wave order, step, value or
-  checkpoint that `exec.md` states. One exception: a wave whose precondition is a state a *later* wave creates
-  may run just after that wave, restoring the state afterwards — that beats a `BLOCKED` the run could have
-  cleared itself. Never reorder on a guess about data; log the move and the restore in the result line.
+  checkpoint that `exec.md` states. Its one exception is the wave-reordering row in § Failure paths.
 - A result is decided by its assertion, never by whether evidence was captured.
 - One result per entry in a TC's `**Tgt:**` — one per pair on a `bo+app` TC.
 - Resolve every target string from a fresh DOM query or element listing immediately before acting on it,
@@ -40,13 +38,13 @@ other row. Phase 1 reads nothing but `exec.md`.
    group's TCs and stem, Target Inventory, Skipped, and AC Coverage.
 
    ```
-   sed -n '1,/^## Test Cases/p' tasks/{KEY}/exec.md
+   sed -n '1,/^## Test Cases/p' tasks/{KEY}/exec/exec.md
    ```
 
 2. **Index.** Every TC's start line, title and case ID, and every result line with its status:
 
    ```
-   grep -n '^### TC-\|^\*\*R@' tasks/{KEY}/exec.md
+   grep -n '^### TC-\|^\*\*R@' tasks/{KEY}/exec/exec.md
    ```
 
    It stays valid for the whole run: recording a result replaces one line with one line, so no line moves.
@@ -91,7 +89,7 @@ the wave:
    `$` for the last group:
 
    ```
-   sed -n '{start},{end}p' tasks/{KEY}/exec.md
+   sed -n '{start},{end}p' tasks/{KEY}/exec/exec.md
    ```
 
    Read only the group about to run. Never widen the range "to have context", never execute a TC from a
@@ -120,8 +118,7 @@ Where every TC in the group is `**Mut:** no` and they share a screen, assert the
 ### 3. Assert
 
 Assert every `**Exp:**` checkpoint against the observable it names, and record what was observed, keyed by
-its checkpoint id. On a `bo+app` TC assert each checkpoint in the session its tag names, with the other still
-open.
+its checkpoint id. On a `bo+app` TC assert each checkpoint in the session its tag names.
 
 In `screenshot` mode the checkpoint's frame is captured **here**, at the assertion moment, under the stem its
 Checkpoint Evidence row carries — then the frame is verified, per `.kiro/steering/capture-mechanics.md`. No
@@ -151,8 +148,8 @@ Omit `{BUG-ID}` while none is filed. Notes carry, as they apply: observed agains
 the backend check, the crash ID or console error, the blocker on a block, any target string that changed, and
 any capture that could not be produced. Never write the evidence path — it derives from the stem.
 
-A `bo+app` TC has **one** result line per pair. Name the surface the failure happened on in the notes; never
-split one flow into a pass on one surface and a fail on the other.
+On a `bo+app` TC, name the surface the failure happened on in the notes; never split one flow into a pass on
+one surface and a fail on the other.
 
 Done when: the file on disk shows this TC's real status for this target, and its line count is unchanged.
 
@@ -170,8 +167,6 @@ Groups row states — its type, its stem, and `**Cap:**` for the moment each che
 file per `.kiro/steering/capture-mechanics.md`, then verify it there. Write no `.md` beside it — the elapsed
 second each checkpoint lands on goes in this TC's result note.
 
-Done when: every file the plan names for this group and this target exists at its derived path and shows its
-asserted state.
 
 ### Per wave
 
@@ -187,20 +182,20 @@ Notes; a crash or an app-side error on a failing TC is FE evidence for `report-b
 | An account cannot log in at the first TC needing it | every TC whose `**Pre:**` names it → `BLOCKED` on that target, naming the account |
 | A target string will not resolve | recover per the driver rule — `playwright-rule.md` § Locator Recovery, `mobile-mcp-rule.md` § Element Resolution Rules. Recovered: update Target Inventory and restart the TC from step 1. Not recovered: `BLOCKED`, naming the element and its screen. Never a guessed tap. |
 | An assertion fails | the failure protocol at step 3, then `FAILED`, then the next TC |
-| A capture fails or cannot be verified | re-capture once; still failing → note it in the result. The result never changes. |
+| A capture fails or cannot be verified | re-capture once; still failing → note it in the result |
 | The app crashes mid-TC | `FAILED` carrying the crash ID; re-apply the wave's `Reset` before the next TC |
 | The wave's state cannot be recovered | the wave's remaining TCs on that target → `BLOCKED`, naming the cause. The next wave still runs. |
 | A wave's precondition is a state a later wave creates | run it just after that wave and restore the state; log the move and the restore in the result line. Never reorder on a guess about data. |
-| Context is lost or compacted mid-run | re-read the header, re-index, re-slice the current group. Never read the file whole, never resume from memory of a block. |
+| Context is lost or compacted mid-run | re-read the header, re-index, re-slice the current group |
 | `finalise` finds no `report.md` | STOP — Phases 1–3 have not run |
 
 ## Phase 3 — Report
 
 1. Re-read the index. A line still `PENDING` never ran: run it, or write `BLOCKED` with the reason it did not.
    Then regenerate `exec.md` § Results Summary from the result lines — once, here, and nowhere else.
-2. `ls evidence/{KEY}/` — confirm every file the plan names is there, and that nothing else is. Note any that
+2. `ls tasks/{KEY}/exec/evidence/` — confirm every file the plan names is there, and that nothing else is. Note any that
    is missing.
-3. Write `tasks/{KEY}/report.md` from `REPORT.md`, filling every section it defines. Its content comes from
+3. Write `tasks/{KEY}/exec/report.md` from `REPORT.md`, filling every section it defines. Its content comes from
    three places already in hand: the exec header (Metadata, Preflight § Targets, AC Coverage, Skipped), the
    index (TC Results, and Executed At from the earliest and latest result timestamps), and the result notes
    (everything else). Re-slice a failing TC's block only for its `**Exp:**` text.
@@ -220,23 +215,21 @@ reason it is not a defect.
 ## Phase 4 — Finalise (`finalise` arg only)
 
 Runs after `report-bug` filed the confirmed defects. Edits `report.md` and `exec.md` only — posts nothing to
-Jira.
+Jira. It changes no status, so no count is recomputed.
 
-1. Read `tasks/{KEY}/report.md`. List every Bugs Found row still carrying `—` in its Bug column. None left →
+1. Read `tasks/{KEY}/exec/report.md`. List every Bugs Found row still carrying `—` in its Bug column. None left →
    say so and stop.
 2. Take the `{TC-ID} → {BUG-KEY}` pairs from the invocation. List every row still unpaired and ask: filed
    under which key, or declined. Never guess a key.
-3. Per pair, write the key everywhere that TC appears — its Bugs Found row, its TC Results row, its
-   Failed & Blocked Details `**Bug:**`, and the failing target's result line in `exec.md`:
+3. Per pair, write the key in the two places that hold one — the Bugs Found row, and the failing target's
+   result line in `exec.md`, which is what a later resume reads:
 
    ```
-   grep -n '^### TC-\|^\*\*R@' tasks/{KEY}/exec.md
+   grep -n '^### TC-\|^\*\*R@' tasks/{KEY}/exec/exec.md
    ```
 
 4. Move every declined candidate to `## Rejected Candidates` with its reason, and drop its Bugs Found row.
-5. Recompute the Summary counts and pass rate from TC Results, per target.
-6. Present the Summary table and every failed or blocked TC.
+5. Present what changed: each TC with the key it now carries, and each declined candidate with its reason.
 
 Done when: every Bugs Found row carries a bug key, every declined candidate sits under Rejected Candidates
-with its reason, every failed target's result line carries the same key as its report row, and the Summary
-counts match TC Results.
+with its reason, and every failed target's result line carries the same key as its report row.

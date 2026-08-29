@@ -1,7 +1,3 @@
----
-inclusion: manual
----
-
 # OTC Shared Rules — Domain Knowledge
 
 Cross-platform rules shared between Back Office and Mobile App.

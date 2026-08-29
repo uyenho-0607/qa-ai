@@ -1,6 +1,6 @@
 ---
 name: grill-tcs
-description: Grill a TC coverage plan before any test case is written — expected-result sources, missing negatives, weak oracles. Use when `generate-tcs` Phase 2 has written `tasks/{KEY}/tc-plan.md`, or when asked to grill or stress-test a plan.
+description: Grill a TC coverage plan before any test case is written — expected-result sources, missing negatives, weak oracles. Use when `generate-tcs` Phase 2 has written `tasks/{KEY}/gen/tc-plan.md`, or when asked to grill or stress-test a plan.
 ---
 
 # Grill TCs
@@ -10,7 +10,7 @@ Stress-test the coverage plan before a single case is written. Done when every `
 ## Contract
 
 - **Args:** `{KEY}` [, `no-gate`]
-- **Reads and updates:** `tasks/{KEY}/tc-plan.md`
+- **Reads and updates:** `tasks/{KEY}/gen/tc-plan.md`
 - **Returns:** every `new` row at READY, or the row moved to Status `needs-clarification`
 - **With `no-gate`:** resolve, update the plan, and hand the resolved table back without stopping — the caller owns the gate
 
@@ -41,7 +41,7 @@ If yes → the assertion is too weak. Tighten the expected value or add a discri
 ## Flow
 
 ### 1. Load Plan
-Read `tasks/{KEY}/tc-plan.md`. List every `new` row by screen.
+Read `tasks/{KEY}/gen/tc-plan.md`. List every `new` row by screen.
 
 ### 2. Grill Each Row
 Per row, answer Q1, Q2, Q3 in a table:
@@ -62,7 +62,7 @@ Per BLOCKED row:
 Present the resolved table. **Wait for user approval before proceeding.**
 
 ### 4. Update Plan
-Apply approved resolutions to `tasks/{KEY}/tc-plan.md` — new rows added, sources filled, statuses set.
+Apply approved resolutions to `tasks/{KEY}/gen/tc-plan.md` — new rows added, sources filled, statuses set.
 Confirm: "Plan updated. [n] rows READY, [n] needs-clarification. Proceeding to TC writing."
 
 ## Hard Rules

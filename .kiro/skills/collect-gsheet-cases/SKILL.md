@@ -5,12 +5,12 @@ description: Fetch all test cases for a Jira issue key from a Google Sheet and s
 
 # Collect Google Sheet Cases
 
-Fetch all test cases for a Jira issue key from a Google Sheet and save to `tasks/{KEY}/tc.md`.
+Fetch all test cases for a Jira issue key from a Google Sheet and save to `tasks/{KEY}/base/tc.md`.
 
 ## Contract
 
 - **Args:** `{KEY}` + spreadsheet URL [, `no-gate`]
-- **Writes:** `tasks/{KEY}/tc.md`
+- **Writes:** `tasks/{KEY}/base/tc.md`
 - **Output exists:** ask — overwrite | reuse | abort
 - **With `no-gate`:** overwrite `tc.md` without asking and stop after Phase 1.
 
@@ -32,7 +32,7 @@ Extract `spreadsheetId` from the URL (long string between `/d/` and `/edit`).
 
 **Completion gate:**
 - [ ] Script exits with code 0
-- [ ] File exists at `tasks/{KEY}/tc.md`
+- [ ] File exists at `tasks/{KEY}/base/tc.md`
 - [ ] File contains at least 1 TC
 
 **On failure, act on the message — do not go exploring.** Each error carries its own answer:
@@ -49,7 +49,7 @@ Extract `spreadsheetId` from the URL (long string between `/d/` and `/edit`).
 
 Read `.kiro/skills/collect-gsheet-cases/TEMPLATE.md` for the Classification field format.
 
-Read `tasks/{KEY}/tc.md` and for each TC:
+Read `tasks/{KEY}/base/tc.md` and for each TC:
 - Classify: automatable vs manual (concrete reason)
 - Default automatable; manual only for hard blockers (e.g. captcha, hardware, 2FA via physical device)
 - Note current **Automation** field value: ✅ automated / 🚧 in progress / ⬜ not set

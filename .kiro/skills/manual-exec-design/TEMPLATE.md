@@ -1,6 +1,6 @@
 # The shape of `exec.md`
 
-Phase 9 writes `tasks/{KEY}/exec.md` to the shape below. Every section is required unless its own note says
+Phase 9 writes `tasks/{KEY}/exec/exec.md` to the shape below. Every section is required unless its own note says
 when to omit it. `## Test Cases` is last and stays last: `manual-exec-run` reads everything above it as the
 header, then slices one TC block at a time.
 

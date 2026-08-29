@@ -58,7 +58,7 @@ For each approved action, choose the most surgical file write:
 **delete** — no patch file needed. `--md` is required by the script even in remove mode, so pass the existing source file:
 ```
 .venv/bin/python3 scripts/format_tc_sheet.py \
-  --md tasks/{KEY}/manual-tcs.md \
+  --md tasks/{KEY}/gen/manual-tcs.md \
   --sheet {SHEET_ID} --tab {TAB} \
   --remove-ids "{TC-ID}"
 ```

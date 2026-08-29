@@ -29,7 +29,7 @@ they are placeholders, not code.
 
 ## File name
 
-Everything lands under `evidence/{KEY}/`. Never the repo root, never a bare filename — a bare name resolves
+Everything lands under `tasks/{KEY}/exec/evidence/`. Never the repo root, never a bare filename — a bare name resolves
 against the MCP server's own working directory.
 
 ```
@@ -65,7 +65,7 @@ its file name alone.
 
 ## No sidecars
 
-**Never write a `.md` beside a capture.** `evidence/{KEY}/` holds `.png` and `.mp4` files and nothing else.
+**Never write a `.md` beside a capture.** `tasks/{KEY}/exec/evidence/` holds `.png` and `.mp4` files and nothing else.
 
 What a capture shows is carried by two things that already exist:
 
@@ -81,13 +81,19 @@ capture is corroboration and the note is the record.
 
 ## Verify
 
-**Frame** — read the `.png` back and confirm the asserted element is visible in it.
+**Frame** — for transient elements (toast, snackbar, banner, notification — anything that disappears after a
+few seconds), read the `.png` back immediately after saving and confirm the element is visible in it. A
+transient element may have cleared by the time the file is saved; the read-back catches a blank or
+already-dismissed frame before it reaches the report.
+
+For stable, settled screen states (a list row, a drawer field, a status badge), a file-exists and non-zero
+check is sufficient — the agent already observed the element before capturing.
 
 **Recording** — confirm the duration covers the whole replay rather than truncating at `timeLimit`, and that
 the file is larger than 0 bytes:
 
 ```bash
-ffprobe -v error -show_entries format=duration,size -of default=nw=1 "evidence/{KEY}/{name}.mp4"
+ffprobe -v error -show_entries format=duration,size -of default=nw=1 "tasks/{KEY}/exec/evidence/{name}.mp4"
 ```
 
 Both device recorders write H.264 mp4 directly; no conversion runs. Web recordings are `.webm` and are

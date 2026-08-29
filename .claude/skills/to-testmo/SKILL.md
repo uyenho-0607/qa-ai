@@ -5,12 +5,12 @@ description: Export manual-tcs.md test cases to Testmo — field mapping, issue 
 
 # To Testmo — Export Test Cases
 
-**Done when:** every TC in `tasks/{KEY}/manual-tcs.md` exists exactly once in Testmo under the confirmed folder, linked to `{KEY}`, configs set, and state Pending Review.
+**Done when:** every TC in `tasks/{KEY}/gen/manual-tcs.md` exists exactly once in Testmo under the confirmed folder, linked to `{KEY}`, configs set, and state Pending Review.
 
 ## Contract
 
 - **Args:** `{KEY}` [, Module folder name or `folder_id`]
-- **Reads:** `tasks/{KEY}/manual-tcs.md`; the id sections of `.claude/steering/testmo.md`
+- **Reads:** `tasks/{KEY}/gen/manual-tcs.md`; the id sections of `.claude/steering/testmo.md`
 - **Writes:** nothing
 
 Every id comes from `testmo.md`. Read only the id sections of `testmo.md`:
@@ -49,7 +49,7 @@ Fixed on every case: `projectId`, `folder_id` (confirmed), `state_id`, `issues: 
 
 1. **Folder** — if a Testmo URL is given (e.g. `…/repositories/2?group_id=4686`), extract `project_id` from the path segment and `folder_id` from the `group_id` query param — no lookup needed. Otherwise: use a bare `folder_id` directly; a Module name → resolve with `testmo_list_folders`; neither → ask "Which Module folder?"
 
-2. **Parse** `tasks/{KEY}/manual-tcs.md` into the params above, one payload per TC.
+2. **Parse** `tasks/{KEY}/gen/manual-tcs.md` into the params above, one payload per TC.
 
    **Configuration** comes from the file header per `generate-tcs/TEMPLATE.md`; a `**Configuration:**` line inside a TC block overrides it for that TC. Split on `;`. Every name must match `testmo.md` § Configurations by Project exactly.
 

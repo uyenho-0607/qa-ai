@@ -5,7 +5,7 @@ description: Review a set of test cases for coverage gaps, weak oracles, non-rep
 
 # Review TCs
 
-**Done when:** every TC graded on all four dimensions, every approved `fix` applied to `tasks/{KEY}/manual-tcs.md`, every `ask` finding reported with its id.
+**Done when:** every TC graded on all four dimensions, every approved `fix` applied to `tasks/{KEY}/gen/manual-tcs.md`, every `ask` finding reported with its id.
 
 ## Contract
 
@@ -14,7 +14,7 @@ description: Review a set of test cases for coverage gaps, weak oracles, non-rep
 | **Args** | `{KEY}` [, sheet URL] [, `no-gate`] |
 | **TC source** | `manual-tcs.md` → sheet URL → Testmo (first that resolves) |
 | **Scope source** | `tc-plan.md` → `jira.md` → invoke `jira-retriever` with `save` |
-| **Writes** | `tasks/{KEY}/tc-review.md` — only when user confirms (format: `TEMPLATE.md`); `tasks/{KEY}/manual-tcs.md` (fixes only) |
+| **Writes** | `tasks/{KEY}/gen/tc-review.md` — only when user confirms (format: `TEMPLATE.md`); `tasks/{KEY}/gen/manual-tcs.md` (fixes only) |
 | **Steering** | loaded in Phase 1 § Rules — that step names the files |
 | **no-gate** | Called from `generate-tcs`. Grade → apply every `fix` → return counts; skip the Phase 2 gate, the `tc-review.md` write, and the Phase 3 re-export; report `ask` findings to the caller. Rule load at Phase 1: only `tc-scenario-guide.md` (caller owns the rest). When invoked standalone by a user, always use the default gate path — which loads the full steering set. |
 | **Output exists** | `tc-review.md` present → ask once: re-review \| reuse \| abort |
@@ -24,9 +24,9 @@ description: Review a set of test cases for coverage gaps, weak oracles, non-rep
 ## Phase 1 — Load
 
 **TCs.** First source that resolves:
-- `tasks/{KEY}/manual-tcs.md` exists → read it.
-- Sheet URL given → invoke `collect-gsheet-cases` with `{KEY}`, URL, `no-gate` → read `tasks/{KEY}/tc.md`.
-- Otherwise → invoke `collect-testmo-cases` with `{KEY}`, `save`, `no-gate` → read `tasks/{KEY}/tc.md`.
+- `tasks/{KEY}/gen/manual-tcs.md` exists → read it.
+- Sheet URL given → invoke `collect-gsheet-cases` with `{KEY}`, URL, `no-gate` → read `tasks/{KEY}/base/tc.md`.
+- Otherwise → invoke `collect-testmo-cases` with `{KEY}`, `save`, `no-gate` → read `tasks/{KEY}/base/tc.md`.
 
 TCs from `tc.md` → Phase 3 writes the corrected set to `manual-tcs.md`; source rows are never edited.
 
@@ -97,11 +97,11 @@ Chat report: TC id plus a plain sentence. Dimension codes and finding ids belong
 
 Then ask:
 ```
-Save full findings to tasks/{KEY}/tc-review.md? (y/n)
+Save full findings to tasks/{KEY}/gen/tc-review.md? (y/n)
 Apply the [n] fixes?
 ```
 
-**File write.** Write `tasks/{KEY}/tc-review.md` only on a yes. Format per `TEMPLATE.md`. After writing: "Written to `tasks/{KEY}/tc-review.md`."
+**File write.** Write `tasks/{KEY}/gen/tc-review.md` only on a yes. Format per `TEMPLATE.md`. After writing: "Written to `tasks/{KEY}/gen/tc-review.md`."
 
 **GATE — stop until approved.** *(skip the gate with `no-gate`, or when invoked by another skill)*
 
@@ -109,7 +109,7 @@ Apply the [n] fixes?
 
 ## Phase 3 — Apply
 
-Apply every approved `fix` to `tasks/{KEY}/manual-tcs.md` per `generate-tcs/TEMPLATE.md`. Leave `ask` findings untouched. Strengthen a weak check — never weaken one to make a TC pass.
+Apply every approved `fix` to `tasks/{KEY}/gen/manual-tcs.md` per `generate-tcs/TEMPLATE.md`. Leave `ask` findings untouched. Strengthen a weak check — never weaken one to make a TC pass.
 
 **TCs from `tc.md` only** (sheet or Testmo source) — convert field names on write:
 
@@ -127,7 +127,7 @@ Drop `Automation` and `State`. Testmo source: derive `Requirement Reference` fro
 **Re-export.** Only when the TCs already exist in a sheet — i.e. the run started from a sheet URL, or a previous export wrote the tab. Patch changed/added IDs only; other rows untouched:
 
 ```
-.venv/bin/python3 scripts/format_tc_sheet.py --md tasks/{KEY}/manual-tcs.md --sheet {SHEET_ID} --tab "{TAB_NAME}" --patch-ids "{TC-ID-1},{TC-ID-2},..."
+.venv/bin/python3 scripts/format_tc_sheet.py --md tasks/{KEY}/gen/manual-tcs.md --sheet {SHEET_ID} --tab "{TAB_NAME}" --patch-ids "{TC-ID-1},{TC-ID-2},..."
 ```
 
 Under `no-gate` the caller exports — stop after applying fixes and report:

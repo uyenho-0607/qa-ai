@@ -50,6 +50,17 @@ Never batch multiple inputs without intermediate state verification.
 - Reach a known page by navigating to its URL, never by clicking back through history.
 - A fresh session is a fresh context: `browser.newContext()`. Nothing else clears storage reliably.
 - `bo-mv` calls `browser_resize` to 390×844 before its first navigation.
+- **Two concurrent independent sessions** — use two contexts from the same browser. Each context has isolated storage (localStorage, cookies, sessionStorage), so two accounts can be logged in simultaneously:
+  ```js
+  const browser = page.context().browser();
+  const ctx2 = await browser.newContext();
+  const page2 = await ctx2.newPage();
+  // page = session A (already logged in), page2 = session B (log in separately)
+  // ... drive both concurrently ...
+  await ctx2.close();
+  ```
+  This makes concurrency TCs (two admins acting simultaneously) agent-executable, not human-executable.
+  `browser` is accessible via `page.context().browser()` — confirmed live.
 
 ## Network Inspection
 Set listeners **before** navigation:

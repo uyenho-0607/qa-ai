@@ -6,7 +6,7 @@ Playwright mechanics for those rules, and nothing else.
 
 **Every path is repo-relative.** `page.screenshot({ path })` and `recordVideo.dir` resolve against the
 Playwright MCP server's working directory, so a bare `'shot.png'` lands at the repo root. Always write
-`evidence/{KEY}/…`, or `tasks/{KEY}/recon/…` for recon. (AO-925, 2026-08-26)
+`tasks/{KEY}/exec/evidence/…`, or `tasks/{KEY}/exec/recon/…` for recon. (AO-925, 2026-08-26)
 
 ## Viewport — first, always
 
@@ -97,7 +97,7 @@ Inspection. Overlay the one relevant response, truncated to the fields that matt
 Viewport → scroll into view → label or annotate → capture:
 
 ```js
-await page.screenshot({ path: 'evidence/{KEY}/{name}.png', type: 'png', scale: 'device' });
+await page.screenshot({ path: 'tasks/{KEY}/exec/evidence/{name}.png', type: 'png', scale: 'device' });
 ```
 
 Where one assertion needs two states — a table and its detail panel, a closed and an open dropdown, two
@@ -113,7 +113,7 @@ read-only flow replays as-is.
 const state = await page.context().storageState();
 const ctx = await page.context().browser().newContext({
   storageState: state,
-  recordVideo: { dir: 'evidence/{KEY}/', size: { width: vw, height: vh } },
+  recordVideo: { dir: 'tasks/{KEY}/exec/evidence/', size: { width: vw, height: vh } },
   viewport: { width: vw, height: vh },
   screen:   { width: vw, height: vh }
 });
@@ -132,7 +132,7 @@ step — `storageState()` does not carry it.
 Convert and name it, then verify per `capture-mechanics.md` § Verify:
 
 ```bash
-ffmpeg -y -i "<webm>" -c:v libx264 -preset fast -crf 23 "evidence/{KEY}/{stem}_{target}.mp4"
+ffmpeg -y -i "<webm>" -c:v libx264 -preset fast -crf 23 "tasks/{KEY}/exec/evidence/{stem}_{target}.mp4"
 ```
 
 Keep the `.webm` until the user confirms the `.mp4`. One video context at a time.

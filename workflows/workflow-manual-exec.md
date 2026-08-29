@@ -14,13 +14,13 @@ skills — this file owns the prompts, the gates, and the order.
 |------|-------|--------|
 | 1 | `jira-retriever` + (`collect-testmo-cases` \| `collect-gsheet-cases`) | `jira.md`, `tc.md` |
 | 2 | `manual-exec-design` | `exec.md`, `recon/` |
-| 3 | `manual-exec-run` | `exec.md` results, `evidence/{KEY}/`, `report.md` |
+| 3 | `manual-exec-run` | `exec.md` results, `tasks/{KEY}/exec/evidence/`, `report.md` |
 | 4 | `report-bug` | Jira SIT Bug subtasks under `{KEY}` |
 | 5 | `manual-exec-run finalise` | `report.md` complete, bug keys backfilled |
 | 6 | Testmo MCP, driven by prompt | a Testmo run with one result per executed TC |
 
 Paths follow `.claude/steering/project-config.md` § Folder Structure: chain files (`jira.md`, `tc.md`,
-`exec.md`, `recon/`, `report.md`) live in `tasks/{KEY}/`; evidence lands in `evidence/{KEY}/`. Both are tracked,
+`exec.md`, `recon/`, `report.md`) live in `tasks/{KEY}/`; evidence lands in `tasks/{KEY}/exec/evidence/`. Both are tracked,
 not ignored — stage per-ticket files with `git-workflow`, never a broad `git add`.
 
 ## Surfaces and targets
@@ -100,7 +100,7 @@ Run every TC on every target its **Tgt:** line names, and record a result per ta
 State the resume plan per target, and the Preflight results, before executing.
 ```
 
-**Output:** `exec.md` with no result cell left `PENDING`; `evidence/{KEY}/` — one verified file per group or
+**Output:** `exec.md` with no result cell left `PENDING`; `tasks/{KEY}/exec/evidence/` — one verified file per group or
 checkpoint per target, and no `.md` beside any of them; `report.md` with a Summary row per
 target, Target Differences, AC Coverage, Bugs Found, and a Failed & Blocked Details entry per failure carrying
 its repro count, backend check, crash or console error, and log lines.
@@ -110,7 +110,7 @@ its repro count, backend check, crash or console error, and log lines.
 Batch gate first — one prompt for the whole list:
 
 ```
-Show me the Bugs Found table from tasks/{KEY}/report.md, verbatim,
+Show me the Bugs Found table from tasks/{KEY}/exec/report.md, verbatim,
 with each row's Targets, Repro, Backend, Crash and Log lines from Failed & Blocked Details.
 File nothing yet. I confirm the list.
 ```
@@ -119,7 +119,7 @@ Then, once confirmed:
 
 ```
 File every confirmed defect as a SIT Bug under {KEY} using the report-bug skill.
-The evidence and the FE/BE signals already exist in tasks/{KEY}/report.md — capture nothing new,
+The evidence and the FE/BE signals already exist in tasks/{KEY}/exec/report.md — capture nothing new,
 reproduce nothing. For each bug, carry from its Failed & Blocked Details entry: the targets it
 reproduced on, the device identifier or URL and build per target, the repro count, the backend check,
 and the evidence file path.
@@ -137,7 +137,7 @@ Rejected Candidates with its reason.
 ```
 /manual-exec-run {KEY} finalise
 
-Backfill the filed {BUG-KEY}s into tasks/{KEY}/report.md and tasks/{KEY}/exec.md.
+Backfill the filed {BUG-KEY}s into tasks/{KEY}/exec/report.md and tasks/{KEY}/exec/exec.md.
 Present the Summary table and every Failed and Blocked TC.
 ```
 
@@ -151,7 +151,7 @@ declined candidate under Rejected Candidates.
 No skill covers this yet — `to-testmo` exports *cases*, not results. Drive the Testmo MCP directly:
 
 ```
-Create a SIT run in Testmo from tasks/{KEY}/report.md, then submit one result per executed TC.
+Create a SIT run in Testmo from tasks/{KEY}/exec/report.md, then submit one result per executed TC.
 Use testmo_create_run, then testmo_batch_create_run_results.
 Project, config and field ids: .claude/steering/testmo.md.
 Where a TC's targets disagree, submit the worse status and name every target in the notes.

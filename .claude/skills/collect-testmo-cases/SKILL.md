@@ -11,7 +11,7 @@ Fetch, group, and deliver all test cases linked to a Jira issue key.
 
 - **Args:** `{KEY}` [, `save`] [, `no-gate`] — e.g. `OMS-1120`
 - **Project ID:** look up `{KEY}`'s project in `.claude/steering/testmo.md` → Testmo Projects table
-- **With `save`:** write `tasks/{KEY}/tc.md`, then present
+- **With `save`:** write `tasks/{KEY}/base/tc.md`, then present
 - **Without `save`:** present the structured output in chat; write no file
 - **With `no-gate`:** skip the Phase 1 Gate and proceed directly to Phase 2
 - **File exists:** ask — overwrite | reuse | abort
@@ -52,6 +52,6 @@ Completion criterion: every case is assigned to a group named by its prefix.
 
 ## Phase 4 — Deliver
 
-Write `tasks/{KEY}/tc.md` (using `TEMPLATE.md`), then present. Skip the write when `save` was not given; present only.
+Write `tasks/{KEY}/base/tc.md` (using `TEMPLATE.md`), then present. Skip the write when `save` was not given; present only.
 
 Completion criterion (`save`): file exists, all N cases present, summary counts match detail counts.
