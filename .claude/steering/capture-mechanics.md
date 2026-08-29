@@ -1,18 +1,19 @@
 # Capture Mechanics
 
 Audience: every skill that captures evidence — `manual-exec-run` during a wave, `capture-evidence` for a
-one-off bug or verification. This file owns the rules that hold for **every** capture. The caller owns the
-stem of the file name; the driver file owns the calls.
+one-off bug or verification, `evidence-auditor` when it audits a run's captures. This file owns the rules that
+hold for **every** capture. The caller owns the stem of the file name.
 
-Load this file plus the row for each target in hand, and no other row:
+Each target's **Group** comes from § Platforms in the caller's own extract — never re-read it here. Load this
+file plus the row for that group, and no other row:
 
-| Target | Driver rule | Capture mechanics |
+| Group | Driver rule | Capture mechanics |
 |---|---|---|
-| `bo`, `bo-mv`, `app-web` | `.claude/steering/playwright-rule.md` | `.claude/steering/capture-web.md` |
-| `ios`, `android` | `.claude/steering/mobile-mcp-rule.md` | `.claude/steering/capture-device.md` |
+| `web` | `.claude/steering/playwright-rule.md` | `.claude/steering/capture-web.md` |
+| `device` | `.claude/steering/maestro-rule.md` | `.claude/steering/capture-device.md` |
 
-Substitute `{KEY}`, `{stem}`, `{target}`, `{N}` and `{name}` with real values before running any snippet —
-they are placeholders, not code.
+Substitute `{KEY}`, `{stem}`, `{target}`, `{dest}`, `{N}` and `{name}` with real values before running any
+snippet — they are placeholders, not code.
 
 ## Invariants
 
@@ -25,19 +26,18 @@ they are placeholders, not code.
 
 ## File name
 
-Everything lands under `tasks/{KEY}/exec/evidence/`. Never the repo root, never a bare filename — a bare name resolves
-against the MCP server's own working directory.
+Everything lands under `tasks/{KEY}/exec/evidence/`. Never the repo root, never a bare filename — a bare name
+resolves against the MCP server's own working directory.
 
 ```
-{stem}_{target}[_f{N}][_a|_b].{png|mp4}
+{stem}_{target}.{png|mp4}
 ```
 
-- `{stem}` — the caller's. An exec run takes it from the plan; a one-off capture derives it per
-  `.claude/skills/capture-evidence/SKILL.md` § File Naming.
-- `{target}` — `bo`, `bo-mv`, `ios`, `android`, `app-web`. Always present, so a multi-target capture is never
-  ambiguous. One file per target.
-- `_f{N}` — frame index, only where one planned capture needs more than one frame.
-- `_a` / `_b` — the two sessions of a two-context capture, in the order the caller names them.
+- `{stem}` — the caller's. An exec run takes it from the plan, per
+  `.claude/skills/manual-exec-design/references/evidence.md` § File Naming (Stem); `report-bug` passes
+  `{KEY}_bug_{N}` and `verify-bug` passes `{KEY}_verify_{N}`.
+- `{target}` — the platform `Id`, verbatim from § Platforms. Always present, so a multi-target capture is never
+  ambiguous. One file per target, including the two sides of a cross-platform pair.
 - `.png` for a frame, `.mp4` for a recording.
 - Maximum 100 characters. Shorten the stem's words, never its ids.
 
@@ -48,32 +48,25 @@ against the MCP server's own working directory.
 | `normal` | a replay pass after the group has been tested — test first, record second |
 | `screenshot` | inline, at the assertion moment |
 
-Enter a recording knowing every step and every target string. Resolving anything inside a recording context
-puts the agent's own latency into the video.
+**A recording is a replay, not the test.** Test the group first, then replay every step inside one recording
+context at a steady pace. Restore the starting precondition only where the test changed state; a read-only flow
+replays as-is. Enter the recording knowing every step and every target string — resolving anything inside a
+recording context puts the agent's own latency into the video, and that reads as a slow app.
 
 ## Label
 
 `{TC-ID} | c{N} | {what is being verified}` — a one-off capture uses the caller's label instead.
 
-`bo`, `bo-mv` and `app-web` are a DOM and take an injected overlay: the label goes in the frame, clear of the
-elements it marks. `ios` and `android` are a native screen and take none, so a device capture is attributed by
-its file name alone.
+Whether the label goes in the frame is the target's own answer — read § Label overlay in its platform pack.
+**Available**: the label is injected into the frame, clear of the elements it marks, and one frame may carry
+several labelled checkpoints. **Not available**: the capture is attributed by its file name alone.
 
 ## No sidecars
 
 **Never write a `.md` beside a capture.** `tasks/{KEY}/exec/evidence/` holds `.png` and `.mp4` files and nothing else.
 
-What a capture shows is carried by two things that already exist:
-
-- **The file name.** The stem encodes the TC id, the checkpoint ids and the target, so a file is attributable
-  without opening anything beside it.
-- **The caller's own record.** An exec run's `**R@{target}:**` note in `exec.md` carries observed-vs-expected,
-  the repro count, the backend check, and any crash or console error — and `report.md` § Failed & Blocked
-  Details repeats it per failure. A one-off capture returns the same facts to its caller.
-
-Never let a fact reach only a capture. Anything a reader would need — the assertion text, what was observed,
-the backend check, the elapsed second a failure lands on in a recording — goes in the result note, because the
-capture is corroboration and the note is the record.
+Never let a fact reach only a capture. The file name attributes it; the caller's own result note is the record
+— assertion text, what was observed, the backend check, the elapsed second a failure lands on in a recording.
 
 ## Verify
 
@@ -92,8 +85,13 @@ the file is larger than 0 bytes:
 ffprobe -v error -show_entries format=duration,size -of default=nw=1 "tasks/{KEY}/exec/evidence/{name}.mp4"
 ```
 
-Both device recorders write H.264 mp4 directly; no conversion runs. Web recordings are `.webm` and are
-converted.
+**Per capture type** — the standards an evidence audit applies:
+
+| Capture type | Verification standard |
+|---|---|
+| Recording | `ffprobe` duration and size check (above). |
+| Settled state on a screen already captured this wave | File existence, non-zero size. |
+| Every other frame — first view, first frame of a wave, any failed frame or size anomaly | Read the image back: confirm the assertion is visible. |
 
 A capture failing either check is re-captured once. One that still fails is recorded in the caller's notes —
 it never changes the result.

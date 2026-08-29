@@ -1,0 +1,117 @@
+{
+  "app": {
+    "flows": {
+      "launch-and-unlock": {
+        "path": "flows/app/launch-and-unlock.yaml",
+        "purpose": "Launch app + passcode unlock",
+        "params": ["PASSCODE"],
+        "precondition": "app installed",
+        "produces": "Home screen unlocked, balance visible",
+        "calls": ["unlock"],
+        "status": "verified"
+      },
+      "nav-withdrawal-accounts": {
+        "path": "flows/app/nav-withdrawal-accounts.yaml",
+        "purpose": "Navigate Home -> Withdrawal accounts hub",
+        "params": ["PASSCODE"],
+        "precondition": "app installed",
+        "produces": "Withdrawal accounts hub screen",
+        "calls": ["unlock"],
+        "status": "verified"
+      },
+      "nav-crypto-addresses": {
+        "path": "flows/app/nav-crypto-addresses.yaml",
+        "purpose": "Navigate Home -> Crypto addresses",
+        "params": ["PASSCODE"],
+        "precondition": "app installed",
+        "produces": "Crypto addresses list screen",
+        "calls": ["unlock"],
+        "status": "verified"
+      },
+      "add-bank-account": {
+        "path": "flows/app/add-bank-account.yaml",
+        "purpose": "Add a bank account end-to-end: form, review, save, OTP",
+        "params": ["LABEL", "COUNTRY_NAME", "BANK_NAME", "CURRENCY_NAME", "ACCOUNT_NAME", "ACCOUNT_NUMBER", "BIC_SWIFT", "ADDRESS", "CITY", "OTP", "PASSCODE"],
+        "precondition": "app running (any screen)",
+        "produces": "new Active bank account in Linked bank accounts",
+        "calls": ["unlock", "nav-linked-bank-accounts", "select-bank-country", "select-currency", "verify-email-otp"],
+        "status": "verified"
+      },
+      "add-crypto-address": {
+        "path": "flows/app/add-crypto-address.yaml",
+        "purpose": "Add a crypto address end-to-end: form, save, OTP",
+        "params": ["LABEL", "WALLET_ADDRESS", "NETWORK_NAME", "OTP", "PASSCODE"],
+        "precondition": "app running (any screen)",
+        "produces": "new crypto address in Crypto addresses",
+        "calls": ["unlock", "select-network", "verify-email-otp"],
+        "status": "unverified — not run to Save; confirm whether OTP is actually required"
+      }
+    },
+    "subflows": {
+      "unlock": {
+        "path": "flows/app/subflows/unlock.yaml",
+        "purpose": "Passcode unlock, conditional on screen visibility",
+        "params": ["PASSCODE"],
+        "precondition": "app launched",
+        "produces": "Home screen if was locked; no-op otherwise",
+        "status": "verified"
+      },
+      "nav-linked-bank-accounts": {
+        "path": "flows/app/subflows/nav-linked-bank-accounts.yaml",
+        "purpose": "Navigate Home -> Linked bank accounts",
+        "params": [],
+        "precondition": "on Home screen, unlocked",
+        "produces": "Linked bank accounts list screen",
+        "status": "verified"
+      },
+      "select-bank-country": {
+        "path": "flows/app/subflows/select-bank-country.yaml",
+        "purpose": "Pick a country in the country sheet (search + point tap + Back, no Done)",
+        "params": ["COUNTRY_NAME"],
+        "precondition": "country sheet open",
+        "produces": "country field set",
+        "status": "verified"
+      },
+      "select-currency": {
+        "path": "flows/app/subflows/select-currency.yaml",
+        "purpose": "Pick a currency in the currency sheet (scroll + tap + Done)",
+        "params": ["CURRENCY_NAME"],
+        "precondition": "currency sheet open",
+        "produces": "currency added to list",
+        "status": "verified"
+      },
+      "select-network": {
+        "path": "flows/app/subflows/select-network.yaml",
+        "purpose": "Pick a network in the network sheet (scroll + tap, no Done)",
+        "params": ["NETWORK_NAME"],
+        "precondition": "network sheet open",
+        "produces": "network field set",
+        "status": "verified"
+      },
+      "verify-email-otp": {
+        "path": "flows/app/subflows/verify-email-otp.yaml",
+        "purpose": "Enter 6-digit email OTP; screen self-submits",
+        "params": ["OTP"],
+        "precondition": "'Verify your email' screen visible",
+        "produces": "OTP submitted",
+        "status": "verified"
+      },
+      "nav-tap-withdraw": {
+        "path": "flows/app/subflows/nav-tap-withdraw.yaml",
+        "purpose": "Tap Home's unlabeled Withdraw icon button",
+        "params": [],
+        "precondition": "on Home screen",
+        "produces": "Withdraw type sheet (Crypto/Fiat) opens",
+        "status": "verified"
+      },
+      "nav-tap-deposit": {
+        "path": "flows/app/subflows/nav-tap-deposit.yaml",
+        "purpose": "Tap Home's unlabeled Deposit icon button",
+        "params": [],
+        "precondition": "on Home screen",
+        "produces": "Deposit funds type sheet (Crypto/Fiat) opens",
+        "status": "verified"
+      }
+    }
+  }
+}

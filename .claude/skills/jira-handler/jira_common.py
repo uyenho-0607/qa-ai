@@ -1,21 +1,32 @@
 """Shared Jira utilities — auth, media UUID resolution, ADF parsing."""
 
 import base64
-import json
 import os
 import re
 import ssl
 import urllib.request
 from pathlib import Path
 
+from dotenv import load_dotenv
 from jira import JIRA
 
-SERVER = "https://aquariux.atlassian.net"
+load_dotenv(Path(__file__).resolve().parents[3] / ".env")
+
+# Site is project config, not code: set JIRA_SERVER in .env.
+# The value for this project is in .claude/steering/jira.md § Rovo MCP.
+def server() -> str:
+    value = os.environ.get("JIRA_SERVER", "").strip()
+    if not value:
+        raise SystemExit(
+            "JIRA_SERVER is not set. Add it to .env — the value for this project is in "
+            ".claude/steering/jira.md § Rovo MCP."
+        )
+    return value if value.startswith("http") else f"https://{value}"
 
 
 def get_jira_client() -> JIRA:
     return JIRA(
-        server=os.environ.get("JIRA_SERVER", SERVER),
+        server=server(),
         basic_auth=(
             os.environ.get(
                 "JIRA_EMAIL", Path("~/.jira_email").expanduser().read_text().strip()
@@ -43,7 +54,7 @@ def get_media_uuid(attachment_id: str) -> str:
 
     The UUID enables "type": "file" in ADF media nodes for inline video playback.
     """
-    url = f"{SERVER}/rest/api/3/attachment/content/{attachment_id}"
+    url = f"{server()}/rest/api/3/attachment/content/{attachment_id}"
     req = urllib.request.Request(
         url,
         method="HEAD",

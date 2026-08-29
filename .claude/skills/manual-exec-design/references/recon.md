@@ -1,48 +1,60 @@
-# Recon
+# Recon & Tier-1 Verification
 
-Scoped verification of what the plan needs: the screens, tabs, sheets and modals the included TCs' steps name,
-on every selected target, and no others. Add a screen only where a TC step reaches it.
+Executed in Phase 3. Strictly scoped to screens, sheets, and modals named in included TC steps. **Recon confirms and verifies; it does not explore.**
 
-Recon confirms and records; it does not explore. It never tests boundaries, never switches roles to look
-around, and never mutates data it does not have to. To learn a feature nobody has mapped yet, run
-`ui-discovery` first and let recon read its output.
+---
 
-Follow the surface pack for each surface in play.
+## 1. Targeted Context Loading
 
-## Order
+- Locators: `jq '.["{section}"].screens.{screen}' .claude/locator-cache.json`, one screen at a time —
+  `{section}` is the pack's `Cached locators:` value, above its first heading.
+- Read only the relevant sections of `.claude/domain/flows.md` or platform domain files.
 
-1. **Read what is already known**, scoped to the screens in hand — never a file in full:
-   `jq '.["{surface key}"].screens.{screen}' .claude/locator-cache.json` one key at a time, then the sections
-   of `.claude/domain/flows.md` and the surface's domain file that name those screens. Most are already
-   recorded.
-2. **Confirm the deltas only.** Visit each screen once per target. A cached target the live screen returns
-   needs no rescan — its source is `locator-cache`. A cached target the screen contradicts is a stale-cache
-   finding: correct the entry in `.claude/locator-cache.json`, and carry it to the gate.
-3. **Screenshot each screen per target**, to `tasks/{KEY}/exec/recon/{screen}_{target}.png`.
-4. **Record every element the TC steps touch** into Target Inventory — screen, container, element, target
-   string, occurrences, per-target presence, source. An element with no `id=`, no `desc=` and no unique
-   `text=` goes to Unaddressable Elements instead, with the TCs it blocks and the fix its pack states.
-5. **Compare every TC expected result against what the screen shows.** Record each disagreement.
-6. **Record any state the recon changed.**
+---
 
-## The three rules that decide whether the plan is safe
+## 2. Recon & Target Validation Rules
 
-1. **Occurrences.** Record how many nodes each target string matches on its screen. Above 1, the Target
-   Inventory cell carries a disambiguator — the container plus a row index — or the target is not usable. A
-   target matching many nodes is how a run passes against the wrong element.
-2. **Scroll before declaring absence.** Scroll each container to its end before recording an element as absent
-   or unaddressable. A viewport listing is not a screen inventory.
-3. **Name the container.** Every inventory row, and every assertion built on it, names its screen and the
-   container the element lives in.
+- **Cache Delta Handling**: Visit each screen once per platform. If live target matches cache, reuse it. If live target differs, update `.claude/locator-cache.json` and add to Target Inventory. Live app beats domain file on all UI facts.
+- **Rule 1 — Disambiguation**: Target strings matching `Occ > 1` on a screen MUST include a container and row index disambiguator.
+- **Rule 2 — Scroll Rule**: Scroll each container to its bottom before declaring any element absent or unaddressable.
+- **Rule 3 — Container Naming**: Every inventory row and assertion must specify its `Screen` and `Container`.
+- **Unaddressable Elements**: If an element has no `id=`, `desc=`, or unique `text=`, record it under `Unaddressable Elements` with blocking TCs and pack fix.
 
-## Done when
+---
 
-- Every screen an included TC's steps name has been visited and screenshotted on every selected target.
-- Every element those steps touch carries a target string, an occurrences count, and a per-target mark.
-- Every target string with occurrences above 1 carries a disambiguator.
-- Every container was scrolled to its end before any absence was recorded.
-- Every unaddressable element lists the TCs it blocks and its fix.
-- Every element or behaviour present on one target and absent on another is recorded.
-- Every TC-expected-vs-live disagreement is recorded.
-- Every stale cache entry is corrected in `.claude/locator-cache.json`.
-- The state recon changed is recorded, or recorded as `none`.
+## 3. Tier-1 Verification Procedure
+
+For every reachable Tier-1 TC:
+
+1. **Capture Screenshot First**: Capture screen state prior to any DOM interaction.
+2. **Read Back the Frame**: Confirm every expected result is visible in the captured frame, then confirm the DOM attributes agree. The frame is what passes Tier 1; the DOM corroborates.
+3. **Save Evidence**: Invoke `/capture-evidence targets={platform} type=screenshot stem={stem} dest=tasks/{KEY}/exec/evidence/ annotation={annotations}`.
+4. **Record Status**:
+   - ✅ **PASSED**: Write the result line per `../TEMPLATE.md` § Field Rules → Result Format. Exclude from execution waves.
+   - ❌ **FAILED**: Record failure finding. Retain TC in wave for run repro count (`2/2` or `1/2`).
+   - ⏳ **DEFERRED**: If screen is unreachable, mark deferred with reason and schedule into execution wave.
+
+---
+
+## 4. Visual Defect Sweep
+
+- Capture 1 frame per distinct visual state (default view, opened drawer/modal, empty state). Shared states share 1 frame.
+- Inspect for clipping, overlap, text truncation, misalignment, or broken layout.
+- Log defect findings to `## Visual Findings`.
+
+---
+
+## 5. Output Captures, Discrepancies & State Logging
+
+- **Recon Screenshots**: Save to `tasks/{KEY}/exec/recon/{screen}_{platform_id}.png` **ONLY** if screen contradicts cache, shows a new state, or fails a TC.
+- **Cross-Platform Discrepancies**: Log any element, column, or behavior present on one platform but absent on another.
+- **TC vs. Live Disagreements**: Log any mismatch between a TC's written expected result and what the live UI displays (e.g., changed label, missing field).
+- **State Changes**: Record all environment data/state changes caused by recon in `## Execution Context` under `Environment changes made` (or write `none`).
+
+---
+
+## Done When
+
+- Every screen named in TC steps is visited on every active platform; every reachable Tier-1 TC is visually
+  verified and DOM-corroborated with evidence; every unreachable one is deferred with a reason.
+- Every rule in §§ 1–5 above is applied and its outputs recorded.

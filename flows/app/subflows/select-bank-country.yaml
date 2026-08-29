@@ -1,0 +1,32 @@
+# Subflow: Select a bank country from the country sheet
+# Precondition: Country sheet is open (after tapping the Bank country field)
+# Env: COUNTRY_NAME (e.g. Singapore, Hong Kong)
+#
+# Three things here are load-bearing — see README "Key Lessons" for the evidence:
+#   - `pressKey: Back`, not `tapOn: Done` (does not close the keyboard) or `hideKeyboard`.
+#   - The point tap. No text selector addresses the row reliably; swap it for
+#     `tapOn: {id: ...}` once the app team adds a testID.
+#   - The gates and the closing assert. Without them the tap misses silently and the
+#     country is left unset.
+appId: com.bfgto.sit.app
+---
+- tapOn:
+    text: "Search country"
+- eraseText: 50
+- inputText: ${COUNTRY_NAME}
+- pressKey: Back
+- extendedWaitUntil:
+    notVisible:
+      id: "com.google.android.inputmethod.latin:id/key_pos_space"
+    timeout: 5000
+- extendedWaitUntil:
+    visible: ${COUNTRY_NAME}
+    timeout: 5000
+- retry:
+    maxRetries: 3
+    commands:
+      - tapOn:
+          point: "57%,28%"
+          waitToSettleTimeoutMs: 1500
+          label: "Select ${COUNTRY_NAME} — first result row"
+      - assertNotVisible: "Select bank country"

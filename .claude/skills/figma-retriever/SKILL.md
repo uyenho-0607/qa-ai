@@ -1,49 +1,17 @@
 ---
 name: figma-retriever
-description: Snapshot Figma design content into a structured markdown file + PNG screenshots. Use when generating test cases from a Figma URL, capturing a UI design baseline, or when another skill needs figma-snapshot.md. Provide the Figma URL and Jira ticket ID.
+description: Snapshot Figma design content into a structured markdown file + PNG screenshots. Use when generating test cases from a Figma URL, or when another skill needs figma-snapshot.md.
 ---
 
 # Figma Retriever
 
-UI/UX design analyst for QA. Extract Figma structure, write a frozen design snapshot, and download PNG screenshots. Downstream skill: `generate-tcs` references `figma-snapshot.md` via `tasks/{KEY}/base/attachments/`.
+UI/UX design analyst for QA. Extract Figma structure, write a frozen design snapshot, and download PNG screenshots.
 
-## Input
+## Contract
 
-Figma URL and Jira ticket ID.
-
-## Output
-
-```
-tasks/<TICKET_ID>/attachments/
-  figma-snapshot.md
-  figma-screenshots/<frame-name>.png …
-```
-
----
-
-## What to Extract (UI/UX only)
-
-- Page layout — nav, breadcrumbs, content areas
-- Interactive components — buttons, inputs, dropdowns, toggles, radios, checkboxes, date pickers
-- Component states — Default, Hover, Focused, Active, Disabled, Selected, Error
-- Tables — headers, sort indicators, row actions
-- Modals / sheets / drawers — title, body, footer buttons
-- Forms — field names, types, required markers, placeholders, order
-- Empty states — illustration, message, CTA
-- Pagination — record count format, navigation style
-- Toasts — position, message, dismiss
-- Action menus — items, destructive actions
-- Tabs — labels, active/inactive
-- Search & filter — placeholder, filter options
-- Confirmation dialogs — title, body, button labels
-
-## What to Ignore
-
-Never extract:
-- Designer annotation boxes (blue/colored notes with specifications or validation rules)
-- Frames named "Notes", "Annotations", or similar
-- Step headers / flow labels added for internal designer reference
-- Figma comments
+- **Args:** one Figma URL, `<TICKET_ID>`; several URLs → run Steps 1-4 per URL, one merged snapshot
+- **Writes:** `tasks/<TICKET_ID>/base/figma/figma-snapshot.md`, `tasks/<TICKET_ID>/base/figma/figma-screenshots/<frame-name>.png`, `.tmp/census-<TICKET_ID>.tsv`
+- **Scope:** rendered UI only
 
 ---
 
@@ -57,162 +25,113 @@ Extract `fileKey` and `nodeId`:
   `https://www.figma.com/design/abc123XYZ/…` → `abc123XYZ`
 - **nodeId**: `node-id` query param, converting hyphens to colons  
   `?node-id=920-154018` → `920:154018`  
-  If absent, omit nodeId.
-
-Reference URL format: `https://www.figma.com/design/<fileKey>/<name>?node-id=<nodeId>&m=dev`
+  No node-id in the URL → ask the caller for a frame link. figma.py requires one.
 
 ---
 
-### Step 2: Fetch Figma Data
+### Step 2: Map the board
 
-```
-mcp__figma__get_figma_data(fileKey: "<fileKey>", nodeId: "<nodeId>")
+```bash
+python3 .claude/skills/figma-retriever/figma.py census <fileKey> <nodeId> --depth 3 > .tmp/census-<TICKET_ID>.tsv
+grep '^TITLE'  .tmp/census-<TICKET_ID>.tsv           # screen inventory — what each screen IS
+grep 'State='  .tmp/census-<TICKET_ID>.tsv           # component-set variants — node id in column 2
+grep '<title text>' .tmp/census-<TICKET_ID>.tsv      # that screen's TITLE row plus every frame under it
 ```
 
-Process the node tree in-context — no scripts. If the response is too large, drill down by calling again with a child `nodeId` until manageable.
+Columns are `type · node id · name · owning title`. Grepping a title string returns the frames that belong to it.
+
+Row, TITLE, and variant counts print to stderr. `Notes` and `Annotations` are already pruned.
+
+**Work from the TITLE rows.** Frames are named for what they are built from (`Modal-basic`), not what they show; the `📁 Step header` beside each screen is the only thing that names it. A TITLE naming a screen you have not fetched is a target you have missed — including the far side of an action, where `Disable/Enable …` titles cover both directions.
+
+Write a target list before fetching anything else:
+
+- Every top-level screen frame → a screenshot in Step 6.
+- **Every `State=` variant → a documented state in Step 5**, with or without an exportable frame. No frame → record it and note the missing screenshot; do not drop it.
+- Designer annotation boxes and Figma comments → excluded.
 
 ---
 
-### Step 3: Extract Design Content
+### Step 3: Fetch each target
 
-Walk every distinct UI screen/state in the node tree and extract:
+The census carries no copy. Batch every target node id into one call, comma-separated:
 
-**Component hierarchy** — nesting, parent-child relationships.
+```bash
+python3 .claude/skills/figma-retriever/figma.py text <fileKey> <id>,<id>,<id>
+```
 
-**Interactive elements** — identify by name patterns:
-- Buttons: names containing `button`, `btn`, `cta`
-- Inputs: `input`, `field`, `text field`, `search`, `textarea`
-- Dropdowns: `dropdown`, `select`, `picker`, `combobox`
-- Modals: `modal`, `dialog`, `popup`, `overlay`
-- Links: `link`, `anchor`, or hyperlink-styled text
-- Checkboxes: `checkbox`, `check`
-- Toggles: `toggle`, `switch`
-- Tabs: `tab`
-- Radios: `radio`
+Output is grouped `## <nodeId> <name>`, then that node's text in document order. Read it directly — it is already filtered to copy.
 
-Label each by its visible text; fall back to component name. Record the parent component.
+Every `State=` node id from the census goes in the batch. No exportable frame is not a reason to skip one — that fetch is the only place its copy exists. "No frame" is never reported as "no content". Every batched id returns a `## <id>` block. A `NOT FOUND` on stderr is recorded as unread, never as "no content".
+
+⚠️ A component **instance** can return the base component's defaults instead of the instance overrides — placeholder strings like `Header` or `No results found`. Instance disagrees with the component-set variant → the variant wins. Record the discrepancy, not the placeholder.
+
+---
+
+### Step 4: Extract Design Content
+
+Walk every distinct UI screen/state in the census and text extraction and extract:
+
+**Interactive elements** — label each by its visible text; fall back to component name. Record the parent component.
 
 **Text content** — every text node value with its parent context. Copy labels, placeholders, and messages verbatim.
 
-**State deduplication** — group artboards that show different states of the same screen (empty/filled/error/hover/toast) under one base name. Document variants as states, not separate screens.
+**State deduplication** — group artboards showing different states of the same screen under one base name. Document variants as states, not separate screens.
+
+**Verbatim, once per variant.** Record each variant's string in full, on its own line. Never collapse two variants into a template (`This [bank account / crypto address] cannot be…`); never hedge (`"Saved successfully." (or similar)`). A string you could not read is recorded as unread, not approximated.
 
 ---
 
-### Step 4: Generate Snapshot
+### Step 5: Generate Snapshot
 
-Save to `tasks/<TICKET_ID>/attachments/figma-snapshot.md`:
+Save to `tasks/<TICKET_ID>/base/figma/figma-snapshot.md`.
 
-```markdown
-# Figma Design Snapshot: <TICKET_ID>
+Required sections and fields:
 
-## Metadata
-- **Figma File**: <file name>
-- **Figma URL**: <original URL>
-- **File Key**: <fileKey>
-- **Node ID**: <nodeId>
-- **Extraction Date**: <current date/time>
-- **Jira Ticket**: <TICKET_ID>
-
-## Page Structure
-
-### Navigation
-- **Side Navigation**: <active item, sub-items>
-- **Top Navigation**: <user info, dropdowns>
-- **Breadcrumbs**: <if present>
-
-### Main Page: <page name>
-
-#### Header
-- **Title**: …
-- **Subtitle**: …
-- **Primary Action Button**: …
-
-#### Search & Filter
-- **Search Field**: Placeholder: "…"
-- **Filter Dropdown**: Options: […]
-
-#### Table
-| Column | Sortable | Data Type | Sample Data |
-|--------|----------|-----------|-------------|
-
-#### Pagination
-- **Format**: "…"
-- **Style**: …
-
-#### Action Menu (per row)
-- <action> (destructive: yes/no)
-
-### Modal/Sheet: <name>
-
-#### Header
-- **Title**: …  **Subtitle**: …
-
-#### Form Fields
-| Field | Type | Required | Placeholder | Notes |
-|-------|------|----------|-------------|-------|
-
-#### Footer
-- **Primary**: … | **Secondary**: … | **Destructive**: …
-
-### State: <name>
-- **Visual**: …  **Title**: …  **Message**: …  **CTA**: …
-
-## Component States Summary
-| Component | States |
-|-----------|--------|
-
-## UI Flow Summary
-1. …
-```
+- **Metadata**: Figma File, Figma URL, File Key, Node ID, Extraction Date, Jira Ticket
+- **Page Structure** — record the platform the design shows; omit the other platform's block
+  - *Web (BO)*: Navigation (side nav active item + sub-items, top nav, breadcrumbs), Header (title, subtitle, primary action), Search & Filter (placeholder, options), Table (columns, sortable, sample data), Pagination (format, style), Action Menu (items, destructive flag)
+  - *Mobile (member app)*: Tab bar (items, active), Header bar (title, back, right action), Section headers, List/Card rows (fields shown, tap target), Scroll or pull-to-refresh, Floating action
+  - *Either*: Modal/Sheet (per modal) — Header (title, subtitle), Form Fields (name, type, required, placeholder), Footer (primary, secondary, destructive CTAs)
+  - *Either*: State (per empty/error/loading state) — Visual, Title, Message, CTA
+- **Component States Summary**: table of component → states (Default, Hover, Focused, Active, Disabled, Selected, Error — those observed)
+- **UI Flow Summary**: numbered steps
 
 ---
 
-### Step 5: Download Screenshots
+### Step 6: Download Screenshots
 
-Export top-level frame nodes as PNGs:
+One batched call for every target — `nodeId=filename`, comma-separated, relative `--out` path:
 
-```
-mcp__figma__download_figma_images(
-  fileKey: "<fileKey>",
-  nodes: [{ nodeId: "<id>", fileName: "<descriptive-name>.png" }],
-  localPath: "tasks/<TICKET_ID>/attachments/figma-screenshots",
-  pngScale: 2
-)
+```bash
+python3 .claude/skills/figma-retriever/figma.py images <fileKey> \
+  "<id>=<descriptive-name>,<id>=<descriptive-name>" \
+  --out tasks/<TICKET_ID>/base/figma/figma-screenshots
 ```
 
-Descriptive filenames: `listing-page-with-data.png`, `create-sheet-default.png`, `delete-confirmation-modal.png`, `empty-state.png`.
+Descriptive filenames: `listing-page-with-data`, `create-sheet-default`, `delete-confirmation-modal`, `empty-state`. The `.png` extension is added for you.
 
-If download fails, note in the snapshot:
-```
-⚠️ Screenshots unavailable. Extraction based on node tree only.
-```
+A `State=` variant with no top-level frame still exports — pass its node id like any other. "No exportable frame" is not a reason to skip a screenshot.
+
+One line per node: `OK` with the path and byte size, or `FAIL` with the reason. Every `FAIL` is recorded in the snapshot's Component States Summary as a missing screenshot.
 
 ---
 
-### Step 6: Read and Analyse Screenshots
+### Step 7: Read and Analyse Screenshots
 
-After all PNGs are saved, `Read` each one:
+After all PNGs are saved, read each PNG in `tasks/<TICKET_ID>/base/figma/figma-screenshots/`.
 
-```
-Read tasks/<TICKET_ID>/attachments/figma-screenshots/<frame-name>.png
-```
+For each image, note the rendered states (what active/selected/disabled elements actually look like) and anything the census and text extraction missed — overlapping elements, visual-only separators, icon usage. If the visual reading contradicts or enriches the census and text extraction, the visual reading wins.
 
-For each image, visually observe and note:
-- Overall layout structure — where nav, header, content, footer sit
-- Visual hierarchy — what draws the eye first, section groupings
-- Component arrangement — how forms, tables, modals are laid out
-- Rendered states — what active/selected/disabled elements actually look like
-- Anything the node tree missed — overlapping elements, visual-only separators, icon usage
+**A render never deletes extracted copy.** "Visual wins" settles what a state *looks like*, not whether a string exists. A frame that renders blank, generic, or with placeholder text (`Header`, `Item`, `No results found`, an empty component) is an unbuilt instance — keep the Step 3 string, record the render as a discrepancy. Never report a string as absent from the file when Step 3 returned it: absence is a claim about the file, and the extraction is the evidence.
 
-Incorporate these observations into the snapshot. If the visual reading contradicts or enriches what the node tree said, the visual reading wins.
-
-Update `tasks/<TICKET_ID>/attachments/figma-snapshot.md`: append or revise the relevant section with visual observations. Edit the section directly — do not append a separate block at the end.
+Update `tasks/<TICKET_ID>/base/figma/figma-snapshot.md` in place — edit sections directly, do not append a separate block.
 
 ---
 
 ## Error Handling
 
-On `mcp__figma__get_figma_data` failure, return to the orchestrator:
+On `figma.py` failure, return to the orchestrator:
 
 ```
 ❌ Figma retrieval failed
@@ -221,13 +140,8 @@ On `mcp__figma__get_figma_data` failure, return to the orchestrator:
    Node ID: <nodeId or "none">
 ```
 
-Common causes: malformed URL, file not shared, node-id not found, MCP not configured.
-
 ---
 
 ## Constraints
 
-- UI/UX only — no validation logic, business rules, or designer notes
-- No source code (.ts, .tsx, .js, .jsx, .css)
-- Process metadata in-context — no Python scripts
-- One snapshot per ticket — overwrite on re-run
+- One snapshot per ticket. Re-run overwrites; a second URL appends sections, never overwrites.

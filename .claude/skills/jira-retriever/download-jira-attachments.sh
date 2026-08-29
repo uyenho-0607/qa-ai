@@ -2,30 +2,40 @@
 # Downloads all attachments from a Jira ticket to a local folder.
 # Automatically extracts keyframes from video attachments using ffmpeg.
 #
-# Prerequisites:
-#   export JIRA_EMAIL="your-email@aquariux.com"
-#   export JIRA_API_TOKEN="your-atlassian-api-token"
+# Prerequisites (set in .env at the repo root, or exported in your shell):
+#   JIRA_EMAIL="your-email@your-org.com"
+#   JIRA_SERVER="your-site.atlassian.net"   # see .claude/steering/jira.md § Rovo MCP
+#   JIRA_API="your-atlassian-api-token"     # or JIRA_API_TOKEN
 #   brew install ffmpeg  (for video frame extraction)
 #
 # Usage:
-#   ./download-jira-attachments.sh OMS-600
+#   ./download-jira-attachments.sh <ISSUE-KEY> [<DEST-KEY>]
+#   DEST-KEY defaults to ISSUE-KEY; pass the parent key when ISSUE-KEY is a sub-task
+#   whose attachments should land under the parent's task folder.
 #
 # Output:
-#   .tmp/jira-tickets/OMS-600/attachments/image-xxx.png
-#   .tmp/jira-tickets/OMS-600/attachments/video-xxx.mp4
-#   .tmp/jira-tickets/OMS-600/attachments/video-xxx-frames/frame-001.png ...
+#   tasks/<DEST-KEY>/base/attachments/image-xxx.png
+#   tasks/<DEST-KEY>/base/attachments/video-xxx.mp4
+#   tasks/<DEST-KEY>/base/attachments/video-xxx-frames/frame-001.png ...
 
 set -euo pipefail
 
-ISSUE_KEY="${1:?Usage: $0 <ISSUE-KEY>}"
-SITE="aquariux.atlassian.net"
+WORKSPACE_ROOT="${WORKSPACE_ROOT:-$PWD}"
+set -a
+[ -f "${WORKSPACE_ROOT}/.env" ] && . "${WORKSPACE_ROOT}/.env"
+set +a
+
+ISSUE_KEY="${1:?Usage: $0 <ISSUE-KEY> [<DEST-KEY>]}"
+DEST_KEY="${2:-$ISSUE_KEY}"
+SITE="${JIRA_SERVER:-aquariux.atlassian.net}"
+SITE="${SITE#https://}"; SITE="${SITE#http://}"
+JIRA_API_TOKEN="${JIRA_API_TOKEN:-${JIRA_API:-}}"
 if [[ -z "${JIRA_EMAIL:-}" || -z "${JIRA_API_TOKEN:-}" ]]; then
-  echo "Error: JIRA_EMAIL and JIRA_API_TOKEN must be set in your environment (add to ~/.zshrc)." >&2
+  echo "Error: JIRA_EMAIL and JIRA_API (or JIRA_API_TOKEN) must be set in .env at the repo root." >&2
   exit 1
 fi
 
-WORKSPACE_ROOT="${WORKSPACE_ROOT:-$PWD}"
-OUT_DIR="${WORKSPACE_ROOT}/.tmp/jira-tickets/${ISSUE_KEY}/attachments"
+OUT_DIR="${WORKSPACE_ROOT}/tasks/${DEST_KEY}/base/attachments"
 
 AUTH=$(printf '%s:%s' "$JIRA_EMAIL" "$JIRA_API_TOKEN" | base64)
 

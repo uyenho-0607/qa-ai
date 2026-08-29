@@ -1,7 +1,17 @@
 # Platform Pack — the contract
 
-Every file in `.kiro/platforms/` answers the same seven questions, under the same headings, in this order.
+Every file in `.kiro/platforms/` answers the same eight questions, under the same headings, in this order.
 A skill loads a pack knowing exactly which headings it will find, so it never searches and never guesses.
+
+A pack's preamble also declares, as plain lines above the first heading: its **Domain** file, and its
+**Cached locators** section key in `.kiro/locator-cache.json`. Rules and skills name neither value
+themselves — they read them here.
+
+**Read one section, never the whole pack.** A caller naming `pack § Stack quirks` extracts that heading alone:
+
+```bash
+awk '/^## /{p=/^## (Stack quirks|Observables)$/} p' .kiro/platforms/{pack}.md
+```
 
 **To add a platform:** copy this file, fill every section, then add a row to
 `.kiro/steering/project-config.md` § Platforms. No skill is edited.
@@ -47,3 +57,12 @@ the lightest one that reaches its first precondition.
 
 What must be confirmed before the first wave, and where each value comes from. Include how to read the build
 under test, and say `unknown` is acceptable when the platform exposes none.
+
+## Stack quirks
+
+Every value a driver rule needs but must not hardcode, because it is true of this app's stack and not of the
+driver. The rule names the placeholder; this section supplies it. Write `none` where the platform has none.
+
+Web packs typically fill: the component library and its hidden-state class for a closed-but-mounted overlay,
+the wide-table scroll container selector, and the `API_PATHS` prefixes a network listener filters on. Device
+packs typically fill: the recorder's duration cap where it differs from the driver's default.

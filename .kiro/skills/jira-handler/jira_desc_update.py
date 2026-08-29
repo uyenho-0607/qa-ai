@@ -5,30 +5,29 @@ NOT for comments. For comments use jira_comment.py.
 
 Usage:
     # Atomic: upload evidence + update description with inline media
-    .venv/bin/python ~/.kiro/skills/jira-handler/jira_desc_update.py --issue OMS-807 \
+    .venv/bin/python3 .kiro/skills/jira-handler/jira_desc_update.py --issue OMS-807 \
         --file ./screenshot.png --filename name.png \
         --adf-file /tmp/desc.json
 
     # Same but with multiple files
-    .venv/bin/python ~/.kiro/skills/jira-handler/jira_desc_update.py --issue OMS-807 \
+    .venv/bin/python3 .kiro/skills/jira-handler/jira_desc_update.py --issue OMS-807 \
         --file ./screenshot.png --filename screenshot.png \
         --file ./video.mp4 --filename video.mp4 \
         --adf-file /tmp/desc.json
 
     # Update description from pre-built ADF file (no upload, UUIDs already in the file)
-    .venv/bin/python ~/.kiro/skills/jira-handler/jira_desc_update.py --issue OMS-807 \
+    .venv/bin/python3 .kiro/skills/jira-handler/jira_desc_update.py --issue OMS-807 \
         --adf-file /tmp/desc.json
 
     # Get media UUID for an existing attachment (helper)
-    .venv/bin/python ~/.kiro/skills/jira-handler/jira_desc_update.py --get-media-uuid 110043
+    .venv/bin/python3 .kiro/skills/jira-handler/jira_desc_update.py --get-media-uuid 110043
 
     # Get multiple media UUIDs at once (comma-separated)
-    .venv/bin/python ~/.kiro/skills/jira-handler/jira_desc_update.py --get-media-uuid 111913,111914
+    .venv/bin/python3 .kiro/skills/jira-handler/jira_desc_update.py --get-media-uuid 111913,111914
 """
 
 import argparse
 import json
-import re
 import sys
 import urllib.request
 from pathlib import Path
@@ -39,13 +38,13 @@ from jira_common import (
     get_jira_client,
     get_media_uuid,
     get_ssl_context,
-    SERVER,
+    server,
 )
 
 
 def update_description(issue_key: str, adf_body: dict):
     """Replace the issue description with ADF content."""
-    url = f"{SERVER}/rest/api/3/issue/{issue_key}"
+    url = f"{server()}/rest/api/3/issue/{issue_key}"
     payload = json.dumps({"fields": {"description": adf_body}}).encode()
     req = urllib.request.Request(
         url,

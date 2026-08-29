@@ -2,17 +2,17 @@
 
 Reads a sheet tab named {issue-key} (or TC-{issue-key} as fallback) from the
 given spreadsheet, merges continuation rows (one row per step), and writes
-`tasks/{issue-key}/tc.md`.
+`tasks/{issue-key}/base/tc.md`.
 
 Auth: uses GOOGLE_SHEETS_REFRESH_TOKEN from .env (falls back to GOOGLE_REFRESH_TOKEN).
 Run `scripts/format_tc_sheet.py` first to generate/update the target sheet.
 
 Usage:
     python3 .claude/skills/collect-gsheet-cases/fetch_gsheet_tcs.py \
-        --issue AO-306 \
-        --sheet-id 1WqA2mpZpcg2e3IRetZOjD0L8Si_6Z8Q2xkbKwiAIYOc
+        --issue PROJ-306 \
+        --sheet-id <google-sheet-id>
 
-Output: tasks/{issue-key}/tc.md
+Output: tasks/{issue-key}/base/tc.md
 """
 
 import argparse
@@ -152,6 +152,7 @@ def parse_tcs(rows: list[list[str]], cols: dict[str, int]) -> list[dict]:
         if cell(row, "id"):
             if current:
                 tcs.append(current)
+            row_steps = [cell(row, "steps")] if cell(row, "steps") else []
             current = {
                 "id": cell(row, "id"),
                 "module": cell(row, "module"),
@@ -159,9 +160,9 @@ def parse_tcs(rows: list[list[str]], cols: dict[str, int]) -> list[dict]:
                 "scenario": cell(row, "scenario"),
                 "type": cell(row, "type"),
                 "prerequisites": cell(row, "prerequisites"),
-                "steps": [cell(row, "steps")] if cell(row, "steps") else [],
+                "steps": row_steps,
                 "test_data": cell(row, "test_data"),
-                "expected": [_prefix_er(cell(row, "expected"), 1)] if cell(row, "expected") else [],
+                "expected": [_prefix_er(cell(row, "expected"), len(row_steps) or 1)] if cell(row, "expected") else [],
                 "priority": cell(row, "priority"),
                 "requirement_ref": cell(row, "requirement_ref"),
                 "automation": cell(row, "automation"),
@@ -171,7 +172,7 @@ def parse_tcs(rows: list[list[str]], cols: dict[str, int]) -> list[dict]:
             if cell(row, "steps"):
                 current["steps"].append(cell(row, "steps"))
             if cell(row, "expected"):
-                step_num = len(current["steps"])  # step was appended above
+                step_num = len(current["steps"]) or 1  # step was appended above, if present
                 current["expected"].append(_prefix_er(cell(row, "expected"), step_num))
             if cell(row, "test_data"):
                 current["test_data"] = f"{current['test_data']}\n{cell(row, 'test_data')}".strip()
@@ -241,7 +242,7 @@ def main() -> None:
         raise SystemExit(f"No test cases parsed from tab '{tab}'.")
     print(f"Parsed {len(tcs)} test cases")
 
-    output_dir = root / "tasks" / issue_key
+    output_dir = root / "tasks" / issue_key / "base"
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / "tc.md"
     output_path.write_text(render_markdown(issue_key, tcs))

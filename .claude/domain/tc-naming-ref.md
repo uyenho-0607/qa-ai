@@ -1,12 +1,5 @@
 # TC Naming Reference — Predefined Modules, Sub-modules & Features
 
-Format: `[Module] – [Sub-module] – [Feature] – [Field/Action] – [Condition]`
-
-- **Module / Sub-module**: predefined (use tables below, exact spelling)
-- **Feature**: predefined (use tables below, exact spelling)
-- **Field/Action**: free-form, specific to the TC
-- **Condition**: mandatory in every name
-
 Source: https://docs.google.com/spreadsheets/d/16R1Aov9dDdl9j9LNxvr0LeMcxslas_KoAQUyFLP9SMI/edit?gid=841145538
 
 ---
@@ -238,13 +231,3 @@ _No sub-modules._
 | Forgot Password | Email input, OTP verification, password reset, OTP validity & resend cooldown, password policy, account recovery |
 | Failed Attempt Counter | Attempt 1–4 warnings, attempt 5 lockout, counter reset, independent per account |
 | Device Lock | 10 attempts within 15 min, 30 min cooldown, message priority |
-
----
-
-## Quick-lookup syntax
-
-To find valid combinations:
-- **Desktop**: `Module` → `Feature` (no sub-module) or `Module` → `Sub-module` → `Feature`
-- **App**: same pattern
-- When **Sub-module is absent** — omit it entirely from the TC name
-- **Exact spelling matters** — copy Module / Sub-module / Feature names verbatim from the tables above

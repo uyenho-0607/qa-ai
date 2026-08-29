@@ -1,0 +1,18 @@
+# Subflow: Enter email OTP on the "Verify your email" screen
+# Precondition: OTP screen is visible after "Save bank account"
+# Env: OTP (6-digit code, e.g. 655118)
+# Note: No other input on screen — tap the subtitle to focus the OTP field,
+#       then inputText all 6 digits. Screen self-submits on the 6th digit.
+# The first inputText after focusing the field is silently swallowed (a
+# 6-digit code lands as 5 digits and never self-submits) — reproduced 4/4 at
+# AO-925. Type, erase, retype so the field always ends up holding the full code.
+appId: com.bfgto.sit.app
+---
+- assertVisible: "Verify your email"
+- tapOn:
+    text: "Verify your email"
+    label: "Input OTP code"
+- inputText: ${OTP}
+- eraseText: 10
+- inputText: ${OTP}
+- waitForAnimationToEnd

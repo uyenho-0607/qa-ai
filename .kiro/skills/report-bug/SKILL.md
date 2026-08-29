@@ -1,74 +1,72 @@
 ---
 name: report-bug
-description: "Report SIT bugs — classify FE/BE, capture evidence, create subtask under parent. Use when user asks to file/report a bug, or says /bug, /report-bug."
+description: Report SIT bug — classify FE/BE, capture evidence, create a SIT Bug subtask under the parent. Use on /bug, /report-bug, or asks to file a bug.
 ---
 
-# Report Bug
+## Contract
+
+- **Args:** `{PARENT}` — parent ticket key (required)
+- **Writes:** `tasks/{PARENT}/exec/evidence/` · a `SIT Bug` sub-task under `{PARENT}`
+- **Returns:** the created `SIT Bug` key
 
 ## Pre-Flight
 1. Read `.kiro/docs/lessons.md`
-2. Extract Jira constants:
-   ```bash
-   awk '/^## /{p = /Rovo MCP|Transitions|Bug Assignment/} p' .kiro/steering/jira.md
+2. Extract the target list and URLs:
    ```
-   Read `project-config.md` for URLs.
-3. Extract the target vocabulary, then the section for the target in hand — **one surface, never both**:
-   ```bash
-   awk '/^## /{p = /Target Vocabulary/} p' .kiro/steering/bug-conventions.md
-   # then, substituting Web or Device for {S}:
-   awk '/^## /{p = /Classify FE vs BE|{S} Targets — Reproduce and Classify|Evidence Rule/} p' \
-     .kiro/steering/bug-conventions.md
+   awk '/^## /{p=/^## (Platforms|Environment)$/} p' .kiro/steering/project-config.md
    ```
-4. Read the domain file that § Target Vocabulary names for the target in hand, plus
-   `.kiro/domain/otc-shared.md` for rules spanning both surfaces.
 
 ## Flow
 
 ### 1. Gather Info
-- Parent ticket (required) — bug is "SIT Bug" subtask, never standalone
+- Parent ticket (required)
 - Symptom vs expected behavior
-- **Target** — where the defect was seen, per § Target Vocabulary. Ask; never infer it from the module name. A defect on
-  two targets is one bug naming both.
+
+**Invoked standalone** → dispatch the `dup-scout` agent with the symptom, the platform, and the parent key before filing anything. A `duplicate of {KEY}` verdict goes to the user with the key, and they decide: comment on the existing bug, or file a new one. No Agent tool in context → grep `tasks/*/exec/report.md` for the symptom and check the parent's existing SIT Bug sub-tasks, then present what you found. **Invoked by `manual-exec-run` Phase 4** → the scan already ran there; skip it.
+- **Target** — where the defect was seen, from § Platforms (`bo`, `android`, …). Never infer from the module. Two targets = one bug naming both → load that row's Pack, then the domain section that pack names for the module.
 
 ### 2. Plan → GATE
 Present and wait for approval:
 ```
 PLAN: Bug under {PARENT}
 Title: [{PROJECT_KEY}][{Module}] {symptom summary}
-Target: {bo | bo-mv | ios | android | app-web — every one it reproduces on}
+Target: {ids from § Platforms — every one it reproduces on}
 Symptom: {what's wrong}
 Expected: {correct behavior}
-Classification: {API to intercept — web} | {endpoint to check, crash and log — device}
-Evidence: {screenshot/video} × {one per target} — {reasoning}
-Duplicate JQL: parent = {PARENT} AND summary ~ "{keyword}"
+Classification: {API to intercept}
+Evidence: {screenshot/video} — {reasoning}
+Element: {id=|desc=|text= of the asserted element}
+Label: {what is verified}
 ```
 
 ### 3. Execute
-1. Duplicate check → if found, ask user before proceeding
-2. Reproduce on every target in the plan, per its § Reproduce and Classify section — a web target with interception started
-   before the first navigation; a device target collecting the backend check, crashes and the device log,
-   with a repro count
-3. Classify FE/BE per § Classify FE vs BE, using the signals the target actually produced → GATE: confirm
-   with user
-4. disclose_context("capture-evidence") — never capture manually. Pass `targets` (every target it reproduced
-   on), `purpose: bug`, the element and label, and `backend` where a backend check ran
+1. Reproduce on every target. Web → intercept network BEFORE first navigation. Device → no interception exists; collect the backend check, crash log, device log, repro count
+2. Classify FE/BE from what the target produced → GATE: confirm with user
+3. Invoke `capture-evidence` skill. Pass `targets={targets}`, `stem={PARENT}_bug_{N}` (`{N}` = next unused index in `dest`), `dest=tasks/{PARENT}/exec/evidence/`, `type={screenshot|video per § Evidence Decision}`, `element={id=|desc=|text= of the asserted element}`, `label={what is verified}`, `annotation=yes` web / `no` device
+   **Invoked by `manual-exec-run`** → the evidence exists; take its path from the candidate and skip re-capture unless § Evidence Decision calls for a different `type`.
 
 ### 4. Create Bug
-disclose_context("jira-handler") action: `create_bug`
+Invoke `jira-handler` skill — action: `create_bug`
 - summary: `[{PROJECT_KEY}][Module] symptom`
-- Attach every capture `capture-evidence` returned, and nothing else — never a `.md` beside one
-- A native frame shows no device, OS version, build, or statement of what it proves. Write all four into the
-  description itself, per capture, so an attachment is never the only place a fact lives
-- Name every target the defect reproduced on in the description, with the device identifier or URL and the
-  build per target
-- If wrong evidence → action: `fix_wrong_evidence`
+- Name every target the defect reproduced on, with its device identifier or URL
+- Bug text: simple English, ≤12 words a sentence, active voice, present tense. State the observed defect; nothing about how it was found.
+- assignee: from the confirmed FE/BE classification per `.kiro/skills/jira-handler/dev-team.md` § Assignment Rule
+- Return the key to the caller.
 
 ### 5. Cleanup
-- Ask about Testmo link
-- Add `@issue` decorator if from test
-- Delete local files after upload confirmed
+- Ask whether to submit the Testmo run result; on yes disclose_context("mark-testmo-run").
+- Delete the local copy only after the user confirms Jira shows the attachment. `report.md` keeps the path as a record of what was filed.
 
-## Classification & Evidence Rules
+## FE vs BE Classification
 
-Already in hand from Pre-Flight step 3 — the shared § Classify FE vs BE, the § for this target's surface, and
-§ Evidence Rule. Do not re-extract, and never read the other surface's section.
+**Intercept network — never guess.**
+
+- **BE**: 5xx error, wrong/missing API payload data, unexpected 4xx, data inconsistency, ignored API params.
+- **FE**: API correct but UI wrong, layout/styling/Figma mismatch, JS error, UI-side sort/filter bug.
+Ambiguous → ask user.
+
+## Evidence Decision
+Rule: "Single frame proves it?" → screenshot. "Action + result?" → video.
+- **Screenshot**: Static data/format, missing element, layout/styling, toast.
+- **Video**: Sort/filter/search, multi-step workflow, routing, state update.
+*API wrong data*: Screenshot + console overlay

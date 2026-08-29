@@ -1,0 +1,18 @@
+# Subflow: Unlock app with passcode
+# Handles the "Welcome back / Enter your app passcode" screen.
+# Call via: runFlow: { file: subflows/unlock.yaml }
+# Env: PASSCODE (default 111111)
+# No hideKeyboard here: the passcode screen self-submits on the 6th digit and
+# the keyboard is already gone by then, so hideKeyboard has nothing to hide —
+# Maestro sends a Back press instead, which silently exits the app to the
+# launcher. Cost 3 failed runs at AO-925 Wave 8 before this was found.
+appId: com.bfgto.sit.app
+---
+- runFlow:
+    when:
+      visible: "Enter your app passcode to unlock."
+    commands:
+      - tapOn:
+          text: "Enter your app passcode to unlock."
+      - inputText: ${PASSCODE}
+      - waitForAnimationToEnd

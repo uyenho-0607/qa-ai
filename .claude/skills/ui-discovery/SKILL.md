@@ -1,49 +1,62 @@
 ---
 name: ui-discovery
-description: Map business behaviour of a live web application — workflows, values, validation rules, permissions, state transitions — then save findings as a Checkpoint Map and domain flow file. Use when user says "explore this page", "discover the UI", "map this feature", "build checkpoint map".
+description: Map a live web app's business behaviour into a Checkpoint Map and domain flow file. Use on "map this feature", "discover the UI".
 ---
 
 # UI Discovery
 
 Outputs: **Checkpoint Map** (where values appear) + **flow file** (behaviour, validation, transitions).
 
-Rules: `.claude/steering/playwright-rule.md`, `.claude/skills/ui-discovery/rules.md`, `.claude/steering/reasoning-standards.md`
-
 ## Hard Rule
-**Every phase is mandatory. No phase may be skipped, shortened, or rationalized away.** Even if POM exists or pages seem familiar — always discover live state.
+Even if POM exists or pages seem familiar — always discover live state.
+
+## Phase 0 — Load rules
+Read `.claude/steering/playwright-rule.md` and `.claude/skills/ui-discovery/rules.md` before the first navigation.
+Read the pack named by the target's row in `project-config.md` § Platforms (§ Targets, § Cached locators,
+§ Stack quirks). For the `bo` target this resolves to `.claude/platforms/bo.md`.
 
 ## Inputs
 - Target feature/capability
-- Target app: OTC Back Office (`BO_URL`) — roles: Maker / Checker / Admin
+- Target app: the platform under discovery — its row in `project-config.md` § Platforms names the pack; the
+  pack names its domain file and roles. **Name no app here.**
 - Flow file path (default: `.claude/domain/flows.md`)
-- Read `project-config.md` for URLs/credentials
+- URLs, credentials and roles: `project-config.md` § Environment and § Platforms — extract, never whole:
+  `awk '/^## /{p=/^## (Environment|Platforms)$/} p' .claude/steering/project-config.md`
 
 ## Flow
 
 ### Phase 1 — Page Identification → GATE
 List all pages/tabs/panels/modals where feature data appears.
-For each: app name, navigation path, expected business value.
+For each: app name (omit when fewer than two web-group platforms are enabled per project-config.md §
+Platforms), navigation path, expected business value.
 
 ### Phase 2 — Live Exploration → GATE
 For each page:
 
 **2.1 Navigate & capture**
-Navigate → waitForLoadState + waitForTimeout(500) → extract data-testids + values → screenshot
+Navigate → settle per `.claude/steering/playwright-rule.md` § Timeouts → scan data-testids per § DOM-First Rule → extract
+values → capture screenshot via the `capture-evidence` skill (`dest: reports/discovery/{feature}/`, `stem:`
+page/state name)
 
 **2.2 Map business values (Checkpoint Map)**
+Per `rules.md` § Business Information.
+
 | # | App | Page | Navigation | Field Label | data-testid | Live Value | Format |
 
+App column applies only when more than one platform is in scope (see Phase 1) — omit otherwise.
+
 **2.3 Map interactions**
-Perform actions → capture state after each → record: what changed, new fields, validation
+Per `rules.md` § Workflow.
 
 **2.4 Map validation**
-Test boundaries (min, max, empty, invalid) → capture error messages, enable/disable, constraints
+Per `rules.md` § Rules and Constraints.
 
 **2.5 Map permissions**
-If multiple roles: switch and repeat 2.1-2.2
+Per `rules.md` § Permissions and Platforms. If multiple roles: switch and repeat 2.1-2.4.
 
 ### Phase 3 — Cross-App Consistency → GATE
-Verify same value across all apps. Flag inconsistencies.
+Skip when fewer than two web-group platforms are enabled (project-config.md § Platforms). Otherwise: verify
+same value across all apps; flag inconsistencies.
 
 ### Phase 4 — Outputs
 1. **Checkpoint Map** — consolidated table
@@ -58,7 +71,8 @@ Verify same value across all apps. Flag inconsistencies.
    ## Locators
    ```
 3. **Locator cache** — update `.claude/locator-cache.json`
-4. **Confidence Report** — one row per dimension:
+4. **Screenshots** — file paths returned by `capture-evidence` in step 2.1, under `reports/discovery/{feature}/`
+5. **Confidence Report** — one row per dimension:
 
    ```
    Discovery — {Feature}    [n] pages · [n] checkpoints · [n] validation rules
@@ -66,12 +80,12 @@ Verify same value across all apps. Flag inconsistencies.
    | Dimension | Observed | Confidence | Gap |
    |---|---|---|---|
    | Page coverage | [n]/[n] pages from Phase 1 explored | high/med/low | [what was not reached] |
-   | Checkpoint map | [n] values across [n] locations | | |
-   | Validation rules | [n] rules observed live | | |
-   | Permission mapping | [n]/[n] roles exercised | | |
-   | Cross-app consistency | [n] values compared, [n] mismatches | | |
+   | Checkpoint map | [n] values across [n] locations | high/med/low | [gap] |
+   | Validation rules | [n] rules observed live | high/med/low | [gap] |
+   | Permission mapping | [n]/[n] roles exercised | high/med/low | [gap] |
+   | Cross-app consistency (only when >1 platform in scope) | [n] values compared, [n] mismatches | high/med/low | [gap] |
    ```
 
    Confidence is `high` only where every row came from a live observation. Anything inferred from a label, a requirement, or a previous session is `low` — name it in Gap.
 
-   `.claude/domain/flows.md` and `.claude/locator-cache.json` do not exist until this phase writes them; create them rather than reporting them missing.
+   Merge findings into the flow file and the locator cache — never overwrite either; create a file only when it genuinely does not exist.

@@ -1,78 +1,66 @@
 ---
 name: verify-bug
-description: "Verify bug fixes — reproduce STR, capture evidence, post verification comment, transition ticket. Use when user asks to verify a fix, retest, or says /verify-bugs-batch."
+description: Verify a bug fix — reproduce STR, capture evidence, post verification comment, transition. Use on asks to verify or retest, /verify-bug.
 ---
 
-# Verify Bug
+## Contract
+
+- **Args:** `{KEY}` — bug ticket key (required) [, env: `sit`]
+- **Writes:** `tasks/{KEY}/exec/evidence/` · one comment on `{KEY}` · at most one transition
 
 ## Pre-Flight
 1. Read `.claude/docs/lessons.md`
-2. Extract Jira transitions:
-   ```bash
-   awk '/^## /{p = /Transitions/} p' .claude/steering/jira.md
+2. Extract `.claude/steering/jira.md` — Transitions section only:
    ```
-   Read `project-config.md` for URLs.
-3. Extract the target vocabulary, then the section for the target in hand — **one surface, never both**:
-   ```bash
-   awk '/^## /{p = /Target Vocabulary/} p' .claude/steering/bug-conventions.md
-   # then, substituting Web or Device for {S}:
-   awk '/^## /{p = /Classify FE vs BE|{S} Targets — Reproduce and Classify|Evidence Rule/} p' \
-     .claude/steering/bug-conventions.md
+   awk '/^## /{p=/^## Transitions$/} p' .claude/steering/jira.md
    ```
-4. Read the domain file that § Target Vocabulary names for the target in hand, plus
-   `.claude/domain/otc-shared.md` for rules spanning both surfaces.
+3. Extract the target list and URLs:
+   ```
+   awk '/^## /{p=/^## (Platforms|Environment)$/} p' .claude/steering/project-config.md
+   ```
+4. Read the target's pack from § Platforms, then extract the module's section from the domain file the pack points to:
+   ```
+   awk '/^## /{p=/^## {Module}$/} p' .claude/domain/{domain file}
+   ```
 
 ## Flow
 
 ### 1. Fetch Bug
 - `getJiraIssue` fields: summary, description, attachment, status
 - Note status for transition decision
-- Match evidence type/count from original bug attachments
-- **Target** — the one the bug names, per § Target Vocabulary. A bug naming two targets is verified on both, and passes
-  only where both pass. A bug naming none: ask — never assume `bo`.
+- Match evidence type from original bug attachments, per target
+- **Target** — the one the bug names, from § Platforms. Two targets = verify both, passes only if both pass. Names none → ask, never assume
 
 ### 2. Plan → GATE
 Present and wait for approval:
 ```
 PLAN: Verify {KEY}
-Status: {status} | Target: {bo | bo-mv | ios | android | app-web — every one the bug names}
+Status: {status} | Target: {ids from § Platforms — every one the bug names}
 STR: {steps}
 Pass: {criteria} | Fail: {criteria}
 Evidence: {type} x{count}, one per target
 ```
 
 ### 3. Execute
-1. Follow the STR on every target in the plan, per its § Reproduce and Classify section — a browser for a web target, a
-   device for `ios` / `android`. On a device target, collect the backend check, crashes and the device log
-   before deciding a fail
-2. Propose finding → GATE: wait for user agreement. A target-specific result is stated per target, never
-   averaged
-3. Invoke the `capture-evidence` skill — never capture manually. Pass `targets` (every target verified),
-   `purpose: verify`, the element and label
+1. Follow the STR on every target. Web → browser, elements from the live DOM. Device → terminate and relaunch to reach the start state, never tap back through the stack; elements from a current screen inspection, never a coordinate
+2. Device has no network interception — before calling a fail, collect the backend check for the implicated endpoint, the crash log and the device log
+3. Capture evidence immediately once pass/fail is observed, before proposing the finding — a BO session can expire and a device app gets terminated/relaunched while a gate waits on the user. Invoke `capture-evidence` skill. Pass `targets={targets}`, `stem={KEY}_verify_{N}`, `dest=tasks/{KEY}/exec/evidence/`, `type={type}`, element, label, `annotation=yes` web / `no` device
+4. Propose finding → GATE: wait for user agreement, with the evidence file paths already in hand. State the result per target, never averaged
 
 ### 4. Post Comment
-Invoke the `jira-handler` skill action: `post_verification`
-- State the result per target, and name the device identifier or URL and the build for each
-- Attach captures only — never a `.md` beside one. State the device, OS version, build and what each capture
-  shows in the comment itself
-- If wrong → action: `fix_wrong_comment`
+Invoke `jira-handler` skill — action: `post_verification`. Pass `key={KEY}`, the file paths `capture-evidence` returned, `env={env}`, `verdict={Verified FIXED|Verified NOT FIXED}`, and the per-target result text.
+- State the result per target, naming its device identifier or URL and the build
 
 ### 5. Transition
 
-Invoke the `jira-handler` skill action: `transition`. Ids come from the Pre-Flight extract — never from memory.
-
-Path: `Ready to Test in SIT` → `SIT in Progress` → `Pass SIT` on a pass, `Reopen` on a fail. `Not Required` when the bug is no longer required.
+Invoke `jira-handler` skill — action: `transition`. Ids come from the Pre-Flight 2 extract, never from memory.
 
 ### 6. Cleanup
 - Ask about Testmo updates
-- Delete local files after upload confirmed
-- Verification turned up a reusable lesson — a locator that moved, a fixture that lies, an env quirk that cost a re-run → append one bullet to `.claude/docs/lessons.md` with the ticket key. Nothing reusable → skip.
+- Delete the local copy once Jira shows the attachment.
 
 ## Rules
 - Evidence count must match or exceed original bug, per target
-- Before reopening: validate every element against the live source — the DOM on a web target, the current
-  `mobile_list_elements_on_screen` return on a device target — and check fixtures. An element that moved is
-  not a reopened bug
-- A device target absent: report it unavailable and verify the targets that are present. Never pass a target
-  that never ran
+- Before reopening: validate every element and check fixtures. An element that moved is not a reopened bug
+- A device absent → report it unavailable and verify the targets present. Never pass a target that never ran
 - Different issue found → close this bug, file new one

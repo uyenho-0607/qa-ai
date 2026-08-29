@@ -6,16 +6,12 @@ inclusion: manual
 
 ## Name Test Cases
 
-Format: `[Module] – [Sub-module] – [Feature] – [Field/Action] – [Condition]`
+Format and field order: `.kiro/skills/generate-tcs/TEMPLATE.md` § `**Name:**`.
 
-Approved Module, Sub-module, and Feature names: `.kiro/domain/tc-naming-ref.md`. Copy them verbatim — that file is the authority for spelling.
-
-```bash
-awk -v m="{Module}" '/^#/{p = ($0 == "### " m)} p' .kiro/domain/tc-naming-ref.md
-```
+Approved Module, Sub-module, and Feature names: `.kiro/domain/tc-naming-ref.md`. Copy them verbatim — that file is the authority for spelling. Extraction command: `generate-tcs/SKILL.md` § 3.1.
 
 - Include Module and Condition in every name.
-- Include Sub-module when the reference lists sub-modules for that Module (e.g. Action Required > Balance Approvals, Configuration > Currency Pairs). Omit when it lists none (e.g. Login, OTC, Members).
+- Include Sub-module when the reference lists sub-modules for that Module. Omit when it lists none.
 - Omit Feature and Field/Action when not applicable.
 - Write Field/Action free-form, specific to the TC.
 - Separate segments with an en dash (`–`).
@@ -41,7 +37,7 @@ Keep scenarios to one condition and one outcome. Put exact error strings, field 
 
 Exclude login from Steps. Exception: include login only when the TC requires logging into multiple platforms.
 
-Never write a standalone observation step. The Expected Result column *is* the observation — a step that only looks at the outcome adds nothing.
+Never write a standalone observation step. The Expected Result column *is* the observation.
 
 ```
 ✔ 3. Tap the "Continue" button.
@@ -53,10 +49,10 @@ Merge/split decisions, step atomicity, and step scope: `tc-design-guide.md`.
 
 ## Write Expected Results
 
-State all verifiable checkpoints as a bullet list. Each bullet names an exact message, value, or state change — one checkpoint per bullet. Write each checkpoint in its own bullet rather than joining them with semicolons, commas, or "and". Omit vague outcomes, implementation details, and alternatives joined by "or".
+State all verifiable checkpoints as a bullet list. Each bullet names an exact message, value, or state change — one checkpoint per bullet, never joined with semicolons, commas, or "and". Omit vague outcomes, implementation details, and alternatives joined by "or".
 
 
-For a field whose form gates its submit CTA, an empty-required or invalid-input TC asserts **both** halves: the inline error message *and* that the CTA remains disabled. Both are observable, so both belong in the oracle. Because validation fires inline, such a TC has no "Tap [CTA]" step — the last step is entering the value.
+For a field whose form gates its submit CTA, an empty-required or invalid-input TC asserts **both** halves: the inline error message *and* that the CTA remains disabled. Such a TC ends at entering the value; there is no "Tap [CTA]" step.
 
 ```
 ✔ - "Please enter an email." is displayed below the Email field.
@@ -89,15 +85,14 @@ Before writing a TC, check the plan's `covered by` column and any existing TCs i
 
 ## Assign Platform and Role
 
-- Place platform in **Configuration** — must match an existing Testmo config name. OTC configs: `Admin BO`, `Android app`, `iOS app`. For other projects, fetch via `testmo_list_configs`.
+- Place platform in **Configuration** — must match an existing Testmo config name. The names for this project are in `.kiro/steering/testmo.md` § Configurations by Project; where that file has no row for the project in hand, fetch via `testmo_list_configs`.
 - **Configuration = where the Expected Results (assertions) are checked**, not where the setup or trigger steps happen. If a TC sets up data on mobile but all assertions are verified in the Backoffice, use `Admin BO` only.
 - When assertions span multiple platforms within the same TC, list all applicable configs (e.g. `Android app; iOS app; Admin BO`).
+- One Configuration applies to the whole `manual-tcs.md` file (the header). A single TC needing a different Configuration than the file's default → per-TC `**Configuration:**` override in that TC block (`generate-tcs/TEMPLATE.md`); the export uses the override when present, the header value otherwise.
 - Place user role in **Pre-requisites** (e.g. "Logged in as Admin").
 - Name the role without listing credentials.
 
-## Consolidate Cross-Platform TCs
-
-Consolidate TCs with identical scenarios on Desktop and Mobile into one TC. State platform-specific expected results within the same TC.
+Merging identical scenarios across configs into one TC: `tc-design-guide.md` § Merge or Split.
 
 ## Output Format
 
@@ -105,7 +100,7 @@ Block format, field set, file header, ER bullet prefixes, and block separator: `
 
 ## Order Export Columns
 
-Column order for every export — CSV, Google Sheet, Testmo — is the `COLUMNS` list in `scripts/format_tc_sheet.py`:
+Column order for every export — Google Sheet, Testmo — is the `COLUMNS` list in `scripts/format_tc_sheet.py`:
 
 ```bash
 sed -n '/^COLUMNS = \[/,/^]/p' scripts/format_tc_sheet.py

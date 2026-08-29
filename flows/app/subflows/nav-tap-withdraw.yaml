@@ -1,0 +1,8 @@
+# Subflow: Tap the Home screen's Withdraw icon button
+# Precondition: App is on Home screen (post-unlock)
+# Note: button has no text/testID; the "Withdraw" label below it is a separate, non-clickable TextView
+appId: com.bfgto.sit.app
+---
+- tapOn:
+    point: "77%,25%"
+- waitForAnimationToEnd

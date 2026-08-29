@@ -2,92 +2,106 @@
   "_note": "Selectors verified live on SIT. otc-bo is the Back Office web app (Playwright). bfg-otc-app is the React Native member app, which ships Android + iOS + web from one codebase — its identifiers are platform-neutral, with per-platform overlays. The BO web app exposes NO data-testid attributes; every otc-bo locator is role+name, CSS, or attribute-based.",
   "_verified": "2026-08-27 — AO-925 Wave 2 (app edit/delete + BO drawer and row action menu)",
   "otc-bo": {
-    "login": {
-      "email": "#email",
-      "password": "#password",
-      "submit": "button[type=submit]"
-    },
-    "nav": {
-      "members": "a[href='/members']",
-      "balanceApprovals": "a[href='/approval/balance']",
-      "otcApprovals": "a[href='/approval/otc']",
-      "unidentified": "a[href='/approval/unidentified']",
-      "transactions": "a[href='/transaction']",
-      "actionRequiredToggle": "text=Action Required"
-    },
-    "membersList": {
-      "table": "table",
-      "rowByEmail": "tr[data-row-key='{email}']",
-      "rowRole": "tr[role=button][aria-label^='View details for']"
-    },
-    "memberDetails": {
-      "urlPattern": "/members/details?memberId={id}&tab={tab}&subTab={subTab}",
-      "tabOverview": "#rc-tabs-0-tab-overview",
-      "tabVerification": "#rc-tabs-0-tab-verification",
-      "tabWithdrawalAccounts": "#rc-tabs-0-tab-withdrawal-accounts",
-      "tabRecentActions": "#rc-tabs-0-tab-recent-actions",
-      "_tabNote": "rc-tabs-0 prefix is generated; prefer getByRole('tab', { name: 'Withdrawal Accounts' })"
-    },
-    "withdrawalAccounts": {
-      "subTabBankAccounts": "role=tab[name='Bank Accounts']",
-      "subTabCryptoAddresses": "role=tab[name='Crypto Addresses']",
-      "_subTabNote": "These are BUTTONs with role=tab inside 'flex items-center gap-0 border-none w-fit rounded-lg bg-gray-200 p-0.5' — a toggle pair, NOT stacked sections",
-      "tableHeaders": "table th",
-      "emptyState": "span.text-sm.text-gray-500",
-      "rows": "table tbody tr",
-      "columnSorter": "table th .ant-table-column-sorter",
-      "_cryptoSortNote": "Only 'Created Date' is user-sortable on the Crypto Addresses table.",
-      "_verifiedOn": "2026-08-27 — walked live on SIT as maiadmin@, member 579 (mth2608), both sub-tabs EMPTY",
-      "emptyStateBankText": "No bank accounts",
-      "emptyStateCryptoText": "No crypto addresses",
-      "_emptyStateDeviation": "LIVE TEXT IS 'No bank accounts' / 'No crypto addresses'. AO-925 ERR-9 specifies 'This member has no {bank accounts / crypto addresses}.' — live does NOT match spec.",
-      "bankColumnsLive": [
-        "Bank Name",
-        "Account Holder Name",
-        "Account Number / IBAN",
-        "Currency",
-        "Status",
-        "Created Date",
-        "(unnamed action column)"
-      ],
-      "cryptoColumnsLive": [
-        "Network",
-        "Wallet Address",
-        "Status",
-        "Created Date",
-        "(unnamed action column)"
-      ],
-      "_cryptoAssetColumnMissing": "AO-925 BR-4 requires an 'Asset' column on Crypto Addresses. It is ABSENT live (2026-08-27). Bank table matches spec.",
-      "bankFilters": "Created Date filter, Currency combobox, Status combobox, textbox[placeholder='Bank / Name / Account No.']",
-      "cryptoFilters": "textbox[placeholder='Wallet Address']",
-      "_filtersNote": "Filter/search controls exist on both sub-tabs. AO-925 does not specify them — unspecified surplus, not a defect.",
-      "rowActionTrigger": "button[aria-label='Actions'] — inside the 7th td of each row; disambiguate by tr[data-row-key='{id}']",
-      "rowActionMenu": "ul.ant-dropdown-menu li.ant-dropdown-menu-item — filter by text: View / Disable / Enable",
-      "_rowActionMenuContents": "Active record -> View + Disable. DISABLED record -> View + Enable (no Disable — the menu SWAPS the action, it does not show both). DELETED record -> View ONLY. Verified 2026-08-27 and 2026-08-28.",
-      "detailDrawer": "[role=dialog] (fixed inset-y-0 right-0), backdrop [role=presentation]",
-      "_detailDrawerOpen": "The drawer opens from the row action menu's `View` item. A ROW CLICK does NOT open it - the tr carries an onclick but produced no dialog (verified 2026-08-27, relevant to TC-10).",
-      "_bankDrawerFields": "Sections Account / Beneficiary / Others. Fields: Bank Name, Bank Country, Currency, Account Type, Account Holder Name, Account Number / IBAN, BIC / SWIFT, Bank Code / Routing Number, Beneficiary Address, Created Date, Last Updated. Account Number / IBAN renders MASKED as '•••• {last4}' behind an eye reveal toggle - relevant to TC-11. No Date Deleted field.",
-      "rowByRecordId": "tr.ant-table-row[data-row-key='{backendId}']",
-      "_dropdownVisibleSelector": "Stale ant dropdowns stay in the DOM. ALWAYS scope to the visible one: '.ant-dropdown:not(.ant-dropdown-hidden) li.ant-dropdown-menu-item'. A bare 'ul.ant-dropdown-menu li' resolves to a hidden node and the click times out. (2026-08-28)",
-      "_cryptoNoLabelColumn": "The Crypto Addresses TABLE has no Label column (Network, Wallet Address, Status, Created Date, action). A crypto record can only be identified by name via its detail drawer. AO-925 2026-08-28: id 5 = 'My USDT Wallet' (XRPL, Memo/Tag 123456), id 6 = 'My ETH Wallet', id 7 = 'My TRON Wallet', id 8 = 'My SOL Wallet' (Deleted).",
-      "_cryptoDrawerFields": "Sections Address / Others. Fields: Network, Wallet Address (FULL, unmasked, with a Copy value button), Memo/Tag (only where the network supports it), Created Date, Last Updated. CTA is Disable on an Active record and Enable on a Disabled one; a Deleted record has neither.",
-      "confirmModal": "[role=dialog] — heading in an h1-h4/[class*=title]; exactly two buttons, Cancel + Disable|Enable. LIVE COPY (2026-08-28): heading '{Disable|Enable} {Bank Account|Crypto Address}', body 'This {bank account|crypto address} {masked value} will ...'. Does NOT match AO-925 ERR-1/2/3, which specify a question-form heading and the record's LABEL in the body.",
-      "toastRegion": ".ant-message-notice / [role=alert] / [role=status]. LIVE SUCCESS COPY (2026-08-28): '{Bank account|Crypto address} {disabled|enabled} successfully.' Does NOT match AO-925 ERR-4/ERR-5. Toast settles by ~600ms and persists past 3.6s; it can still be up while the modal is unmounting, so poll for BOTH conditions rather than breaking on the toast alone.",
-      "_sortOrderVerified": "Status outranks Created Date: Active block first (Created Date descending within it), then Disabled, then Deleted. Proven on Crypto Addresses 2026-08-28 (TC-29) where the DELETED record carried the NEWEST Created Date and still sorted last."
-    },
-    "balanceApprovals": {
-      "url": "/approval/balance",
-      "table": "table",
-      "rowViewDetails": "button[aria-label='View details']",
-      "rowByType": "table tbody tr:has-text('{type}')",
-      "drawer": ".ant-drawer",
-      "drawerClose": "button[aria-label='Close drawer']",
-      "approve": "button:has-text('Approve')",
-      "reject": "button:has-text('Reject')",
-      "copyValue": "button[aria-label='Copy value']",
-      "_note": "Ant Design drawer titled 'Balance Details'. Approve/Reject both enabled on a Pending request. Existing Pending withdrawals have toAddress=null (Destination Address '-') so they are not linked to a saved destination record."
-    },
-    "_noTestIds": "Confirmed 2026-08-27: document.querySelectorAll(\"[data-testid]\").length === 0 on Member Details. Every otc-bo locator is role+name, CSS or attribute-based."
+    "_noTestIds": "Confirmed 2026-08-27: document.querySelectorAll(\"[data-testid]\").length === 0 on Member Details. Every otc-bo locator is role+name, CSS or attribute-based.",
+    "screens": {
+      "login": {
+        "email": "#email",
+        "password": "#password",
+        "submit": "button[type=submit]"
+      },
+      "nav": {
+        "members": "a[href='/members']",
+        "balanceApprovals": "a[href='/approval/balance']",
+        "otcApprovals": "a[href='/approval/otc']",
+        "unidentified": "a[href='/approval/unidentified']",
+        "transactions": "a[href='/transaction']",
+        "actionRequiredToggle": "text=Action Required"
+      },
+      "membersList": {
+        "table": "table",
+        "rowByEmail": "tr[data-row-key='{email}']",
+        "rowRole": "tr[role=button][aria-label^='View details for']"
+      },
+      "memberDetails": {
+        "urlPattern": "/members/details?memberId={id}&tab={tab}&subTab={subTab}",
+        "tabOverview": "#rc-tabs-0-tab-overview",
+        "tabVerification": "#rc-tabs-0-tab-verification",
+        "tabWithdrawalAccounts": "#rc-tabs-0-tab-withdrawal-accounts",
+        "tabRecentActions": "#rc-tabs-0-tab-recent-actions",
+        "_tabNote": "rc-tabs-0 prefix is generated; prefer getByRole('tab', { name: 'Withdrawal Accounts' })",
+        "_tabOrder": "Overview | Verification | Withdrawal Accounts | Recent Actions — Withdrawal Accounts is 3rd of 4 (verified 2026-09-03)",
+        "_memberIdVsApiId": "BO URL uses memberId=579 for mth2608@mailinator.com, but the withdrawal-account APIs are called with member/467. The two ids DIFFER — never substitute one for the other."
+      },
+      "withdrawalAccounts": {
+        "subTabBankAccounts": "button[role=tab]:has-text('Bank Accounts')",
+        "subTabCryptoAddresses": "button[role=tab]:has-text('Crypto Addresses')",
+        "_subTabNote": "These are BUTTONs with role=tab inside 'flex items-center gap-0 border-none w-fit rounded-lg bg-gray-200 p-0.5' — a toggle pair, NOT stacked sections",
+        "tableHeaders": "table th",
+        "emptyState": "span.text-sm.text-gray-500",
+        "rows": "table tbody tr",
+        "columnSorter": "table th .ant-table-column-sorter",
+        "_cryptoSortNote": "Only 'Created Date' is user-sortable on the Crypto Addresses table.",
+        "_verifiedOn": "2026-09-03 — walked live on SIT as maiadmin@, member 579 (mth2608), both sub-tabs POPULATED (4 bank, 4 crypto). Supersedes the 2026-08-27 empty-list pass.",
+        "emptyStateBankText": "No bank accounts",
+        "emptyStateCryptoText": "No crypto addresses",
+        "_emptyStateDeviation": "LIVE TEXT IS 'No bank accounts' / 'No crypto addresses'. AO-925 ERR-9 specifies 'This member has no {bank accounts / crypto addresses}.' — live does NOT match spec.",
+        "bankColumnsLive": [
+          "Bank Name",
+          "Account Holder Name",
+          "Account Number / IBAN",
+          "Currency",
+          "Status",
+          "Created Date",
+          "(unnamed action column)"
+        ],
+        "cryptoColumnsLive": [
+          "Network",
+          "Wallet Address",
+          "Status",
+          "Created Date",
+          "(unnamed action column)"
+        ],
+        "_cryptoAssetColumnMissing": "AO-925 BR-4 requires an 'Asset' column on Crypto Addresses. It is ABSENT live (2026-08-27). Bank table matches spec.",
+        "bankFilters": "Created Date filter, Currency combobox, Status combobox, textbox[placeholder='Bank / Name / Account No.']",
+        "cryptoFilters": "Created Date dropdown, Network combobox, Status combobox, textbox[placeholder='Wallet Address']",
+        "_filtersNote": "Filter/search controls exist on both sub-tabs. AO-925 does not specify them — unspecified surplus, not a defect.",
+        "rowActionTrigger": "tr.ant-table-row[data-row-key='{backendId}'] button[aria-label='Actions']",
+        "rowActionMenu": ".ant-dropdown:not(.ant-dropdown-hidden) li.ant-dropdown-menu-item",
+        "_rowActionMenuContents": "Active record -> View + Disable. DISABLED record -> View + Enable (no Disable — the menu SWAPS the action, it does not show both). DELETED record -> View ONLY. Verified 2026-08-27 and 2026-08-28.",
+        "detailDrawer": "[role=dialog] (fixed inset-y-0 right-0), backdrop [role=presentation]",
+        "_detailDrawerOpen": "The drawer opens from the row action menu's `View` item. A ROW CLICK does NOT open it - the tr carries an onclick but produced no dialog (verified 2026-08-27, relevant to TC-10).",
+        "_bankDrawerFields": "Sections Account / Beneficiary / Others. Fields: Bank Name, Bank Country, Currency, Account Type, Account Holder Name, Account Number / IBAN, BIC / SWIFT, Bank Code / Routing Number, Beneficiary Address, Created Date, Last Updated. Account Number / IBAN renders MASKED as '•••• {last4}' behind an eye reveal toggle - relevant to TC-11. No Date Deleted field.",
+        "rowByRecordId": "tr.ant-table-row[data-row-key='{backendId}']",
+        "_dropdownVisibleSelector": "Stale ant dropdowns stay mounted in the DOM. ALWAYS scope to '.ant-dropdown:not(.ant-dropdown-hidden) li.ant-dropdown-menu-item' or you will read a closed menu.",
+        "_cryptoNoLabelColumn": "The Crypto Addresses TABLE has no Label column (Network, Wallet Address, Status, Created Date, action). A crypto record can only be identified by name via its detail drawer. AO-925 2026-08-28: id 5 = 'My USDT Wallet' (XRPL, Memo/Tag 123456), id 6 = 'My ETH Wallet', id 7 = 'My TRON Wallet', id 8 = 'My SOL Wallet' (Deleted).",
+        "_cryptoDrawerFields": "Sections Address / Others. Fields: Network, Wallet Address (FULL, unmasked, with a Copy value button), Memo/Tag (only where the network supports it), Created Date, Last Updated. CTA is Disable on an Active record and Enable on a Disabled one; a Deleted record has neither.",
+        "confirmModal": "[role=dialog] — heading in an h1-h4/[class*=title]; exactly two buttons, Cancel + Disable|Enable. LIVE COPY (2026-08-28): heading '{Disable|Enable} {Bank Account|Crypto Address}', body 'This {bank account|crypto address} {masked value} will ...'. Does NOT match AO-925 ERR-1/2/3, which specify a question-form heading and the record's LABEL in the body.",
+        "toastRegion": ".ant-message-notice / [role=alert] / [role=status]. LIVE SUCCESS COPY (2026-08-28): '{Bank account|Crypto address} {disabled|enabled} successfully.' Does NOT match AO-925 ERR-4/ERR-5. Toast settles by ~600ms and persists past 3.6s; it can still be up while the modal is unmounting, so poll for BOTH conditions rather than breaking on the toast alone.",
+        "_sortOrderVerified": "Status outranks Created Date: Active block, then Disabled, then Deleted. Re-proven 2026-09-03 — Deleted crypto id 8 has the NEWEST Created Date and still sorts last.",
+        "urlBankSubTab": "/members/details?memberId={id}&tab=withdrawal-accounts&subTab=bank-accounts",
+        "urlCryptoSubTab": "/members/details?memberId={id}&tab=withdrawal-accounts&subTab=crypto-addresses",
+        "searchBank": "input[placeholder='Bank / Name / Account No.']",
+        "searchCrypto": "input[placeholder='Wallet Address']",
+        "pagination": "li p:has-text('records')",
+        "pageSizeSelect": "[aria-label='Page Size'], .ant-select:has-text('/ page')",
+        "_cryptoFiltersCorrection": "Cache previously listed ONLY the Wallet Address textbox. Live 2026-09-03 also has Created Date, Network and Status controls.",
+        "_bankMaskingLive": "Account Number / IBAN is masked in the LIST as dots + last 4, e.g. '•••••• 3210'. Dot count tracks the real length.",
+        "noCreateButton": "No Add/Create/New control exists on either sub-tab — verified 2026-09-03 (TC-161964).",
+        "_preflightData_member579": "mth2608@mailinator.com (BO memberId=579, API member id 467). BANK data-row-key: 16 Active (DBS ••3210), 17 Disabled (DBS ••4444), 4 Disabled (HSBC ••1234), 7 Deleted (HSBC ••7766). CRYPTO data-row-key: 7 TRON Active, 6 ETH Active, 5 XRPL Active, 8 Solana Deleted. NO Disabled crypto record exists — create one during the run if a TC needs it. Snapshot 2026-09-03."
+      },
+      "balanceApprovals": {
+        "url": "/approval/balance",
+        "table": "table",
+        "rowViewDetails": "button[aria-label='View details']",
+        "rowByType": "table tbody tr:has-text('{type}')",
+        "drawer": ".ant-drawer",
+        "drawerClose": "button[aria-label='Close drawer']",
+        "approve": "button:has-text('Approve')",
+        "reject": "button:has-text('Reject')",
+        "copyValue": "button[aria-label='Copy value']",
+        "_note": "Ant Design drawer titled 'Balance Details'. Approve/Reject both enabled on a Pending request. Existing Pending withdrawals have toAddress=null (Destination Address '-') so they are not linked to a saved destination record."
+      }
+    }
   },
   "bfg-otc-app": {
     "_note": "React Native + Expo (SDK 57) member app. app.config declares platforms: ios, android, web — one codebase, so `screens` below is platform-neutral and each platform block holds only what genuinely differs (query syntax, coordinates, launch/reset commands).",
@@ -376,10 +390,11 @@
     "cryptoAddressStatusUpdate": "PUT /api/backoffice/backend/crypto-address/member/{profileId}/{id}/status  body {\"status\":\"DISABLED\"|\"ACTIVE\"} — same shape as the bank one; inferred from the bank endpoint, the crypto Disable/Enable UI action is confirmed working (AO-925 TC-38/TC-44) but the URL itself was not captured.",
     "memberBalanceList": "/api/report/backend/balance?pageNum=1&pageSize=1000 — keys: balance, currency, id, member, pendingBalance, profileId, totalBalance. AO-925 2026-08-28: 268 rows across SIT, ZERO for profileId 467, so member mth2608 has no balance row in any currency and cannot raise a withdrawal.",
     "_errorCopyIsServerControlled": "BO surfaces the backend's `message` VERBATIM in its error toast — injecting a 500 with message 'ZZZ-PROBE-MESSAGE' produced a toast reading exactly that. With no `message` it falls back to 'We're experiencing a technical glitch. Please try again later. If the problem persists, please contact our support team.' AO-925 ERR-8 is not implemented on the Disable/Enable path. (2026-08-28, TC-48/TC-49)",
-    "_cryptoLastModifiedNull": "crypto-address/member/{profileId} returns lastModified=null even AFTER a status change, while the drawer renders a real 'Last Updated'. The drawer reads the per-record endpoint crypto-address/member/{profileId}/{id}, not the list. Asserting Last Updated from the list payload gives a false negative. (2026-08-28, TC-38)"
+    "_cryptoLastModifiedNull": "crypto-address/member/{profileId} returns lastModified=null even AFTER a status change, while the drawer renders a real 'Last Updated'. The drawer reads the per-record endpoint crypto-address/member/{profileId}/{id}, not the list. Asserting Last Updated from the list payload gives a false negative. (2026-08-28, TC-38)",
+    "_withdrawalAccountsApiNote": "bankAccountsByMember and cryptoAddressesByMember both fire on tab open and return 200. {memberId} is the API member id (467 for mth2608), NOT the memberId in the BO URL (579)."
   },
   "memberApi": {
-    "_note": "Member-app API, discovered 2026-08-27 by extracting the Hermes string table from the installed APK (assets/index.android.bundle) and probing the gateway. The mobile MCP observes no traffic and mitmproxy stays rejected (.claude/steering/mobile-mcp-rule.md) — this is endpoint DISCOVERY for data seeding, not request interception. Never use it to assert what the app sent.",
+    "_note": "Member-app API, discovered 2026-08-27 by extracting the Hermes string table from the installed APK (assets/index.android.bundle) and probing the gateway. The mobile MCP observes no traffic and mitmproxy stays rejected (.claude/steering/maestro-rule.md) — this is endpoint DISCOVERY for data seeding, not request interception. Never use it to assert what the app sent.",
     "host": "https://dashboard.aqxotc-sit.s20ip12.com — same gateway as Back Office",
     "base": "/api/backoffice/app",
     "login": "POST /api/auth/public/app/login  body {email,password}  -> result.accessToken",

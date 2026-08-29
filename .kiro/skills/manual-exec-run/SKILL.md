@@ -1,235 +1,255 @@
 ---
 name: manual-exec-run
-description: Execute exec.md, the manual SIT plan, on every target it names — Back Office web, the member mobile app, or both. Run by wave, capture evidence, write each result back in place. Use on "run manual tests", /exec-run.
+description: Execute exec.md, the manual SIT plan, on every platform it names. Run by wave, capture evidence, write each result back in place. Use on "run manual tests", /exec-run.
 ---
 
 ## Contract
 
-- **Args:** `{KEY}` [, `finalise`] — e.g. `AO-925`
-- **Reads:** `tasks/{KEY}/exec/exec.md`
-- **Writes:** `tasks/{KEY}/exec/exec.md` (result lines, in place), `tasks/{KEY}/exec/report.md`, evidence to `tasks/{KEY}/exec/evidence/` — the paths `.kiro/steering/project-config.md` § Folder Structure fixes
-- **With `finalise`:** run Phase 4 alone — backfill filed bug keys into the existing `report.md` and `exec.md`
-- **Missing input:** STOP and name the producer. No `exec.md` → `/manual-exec-design {KEY}`; never build one here, and never run it from here. `finalise` with no `report.md` → STOP: Phases 1–3 have not run.
-
-**Loads, at Phase 2 and not before:** `.kiro/docs/lessons.md`, `.kiro/steering/capture-mechanics.md`,
-plus the row it gives each target kind the plan actually runs — a driver rule and a capture file — and no
-other row. Phase 1 reads nothing but `exec.md`.
+- **Args:** `{KEY}` [, `evidence_dest={url}`] [, `finalise`]
+- **Reads:**
+ `tasks/{KEY}/exec/exec.md`
+ `.kiro/steering/project-config.md` § Environment, § Platforms, § Folder Structure — extract, never whole:
+ `awk '/^## /{p=/^## (Environment|Platforms|Folder Structure)$/} p' .kiro/steering/project-config.md`
+ the platform packs `project-config.md` § Platforms names — the enabled platform's pack loads whole
+ `.kiro/docs/lessons.md`, `.kiro/steering/capture-mechanics.md`, and the driver and capture files for each
+ platform kind in play — the Phase 2 gate lists them
+ `.kiro/locator-cache.json`, the endpoint section named in the pack § Observables, for a backend check only — that section alone, never whole
+- **Writes:**
+ `tasks/{KEY}/exec/exec.md` (result lines in place)
+ `tasks/{KEY}/exec/report.md`
+  evidence files per `project-config.md` § Folder Structure
+ `.kiro/docs/lessons.md` (Phase 3 append)
+ `tasks/{KEY}/exec/.upload/` — queue state, and one `ledger-{wave}.md` per wave, both written by the delegates below
+- **Delegates:** `evidence-uploader` agent (per wave, background), `evidence-auditor` agent (Phase 3), `dup-scout` agent (Phase 4), `capture-evidence`, `scaffold-evidence-doc`, `report-bug`
+- **With `finalise`:** run Phase 4 alone — re-enter bug triage on an existing `report.md`. No `report.md` → STOP: Phases 1–3 have not run.
+- **Guardrails:** Execute all phases strictly in sequence. Name no platform directly; derive all platform facts from `project-config.md` § Platforms. If `exec.md` is missing, STOP and prompt user to run `/manual-exec-design {KEY}`
 
 ## Rules
 
-- **The plan decides.** Never re-derive a target, surface, evidence mode, grouping, wave order, step, value or
-  checkpoint that `exec.md` states. Its one exception is the wave-reordering row in § Failure paths.
-- A result is decided by its assertion, never by whether evidence was captured.
-- One result per entry in a TC's `**Tgt:**` — one per pair on a `bo+app` TC.
-- Resolve every target string from a fresh DOM query or element listing immediately before acting on it,
-  in one call or many. Batch a multi-field screen into one script per `mobile-mcp-rule.md` § Element
-  Resolution Rules.
-- A coordinate is never a target string; where one is unavoidable, `mobile-mcp-rule.md` § Element Resolution
-  Rules states the only case that allows it.
-- Take every input value from `**Data:**`. Never invent one.
-- A difference between two targets is a finding, not a variant to normalise. Record both observations.
-- Capture evidence here; file bugs with `report-bug`. This skill never files one.
-- Take every timestamp from `date '+%Y-%m-%d %H:%M'`. Never write one from memory.
+- **Plan Authority:** `exec.md` is strictly binding. Do not re-derive anything.
+- **Result Independence:** Assertions determine pass/fail verdicts; evidence capture status does not.
+- **Uploads Are Delegated:** This session captures and records; it never ships a capture or waits on one. Every upload goes to the Phase 1 worker through the per-wave `evidence-uploader`.
+- **Result Scope:** Exactly one result line per platform per TC (or per pair for cross-platform flows).
+- **Recon Passes:** SKIP execute TCs marked `- {platform} · ✅ PASSED (verified at recon...)`
+- **Platform Divergence:** Cross-platform behavioral differences are findings, not variants. Log both observations.
+- **Bug Keys Live in the Report:** `report.md` is the only file that carries a bug key. `exec.md` records what was observed and is never edited after Phase 3 — a key written into both files is a key that drifts.
 
-## Phase 1 — Load, preflight, resume
+---
 
-1. **Header.** Everything above `## Test Cases`, read once. It is the run's working set — the targets, the
-   evidence mode, Preflight, the wave order with each wave's groups, targets, reset and contexts, each
-   group's TCs and stem, Target Inventory, Skipped, and AC Coverage.
+## Phase 1 — Load, Preflight & Resume
 
-   ```
-   sed -n '1,/^## Test Cases/p' tasks/{KEY}/exec/exec.md
-   ```
+1. **Registry & Header Read**:
+   - Read active platform definitions from `.kiro/steering/project-config.md` § Platforms.
+   - Read `exec.md` header up to `## Test Cases`. Extract `Evidence mode` and `Annotations` settings.
 
-2. **Index.** Every TC's start line, title and case ID, and every result line with its status:
+2. **Evidence Destination**:
+   - If `evidence_dest` arg is given → use it. A user-supplied doc or folder gets a write-access probe first
+     (insert-then-delete for a doc, probe file for a folder); on failure, fall back to the created
+     destination for the mode below.
+   - If not → derive from `Evidence mode`:
+     - `normal`: create a new Drive folder named `[{KEY}] SIT Evidence`. Record its URL and folder id.
+     - `screenshot`: disclose_context("scaffold-evidence-doc") with `{KEY}`. Record the returned URL and doc id.
+   - Write it down as the `--dest` string every later `add` will carry:
+     - Drive folder → `drive:{folderId}`
+     - Doc → `doc:{docId}#{section}`, the section being that TC's own case-name paragraph — plain text,
+       not a styled heading
+   - **Start the upload worker, once, in the background** — `Bash` with `run_in_background: true`:
+     ```bash
+     .venv/bin/python3 scripts/evidence_upload.py serve --key {KEY}
+     ```
+     One worker serves the whole run, and every wave's `evidence-uploader` waits on **this** worker
+     rather than starting its own. Record its task id so Phase 3 can stop it. Then confirm it is
+     serving with both checks — `status` alone is unreliable (`worker_pid` can read `null` while the
+     process is still running):
+     ```bash
+     .venv/bin/python3 scripts/evidence_upload.py status --key {KEY} --json
+     pgrep -f "evidence_upload.py serve --key {KEY}"
+     ```
+     Non-zero exit on `status`, and no match from `pgrep` → the worker did not start; stop and report.
 
-   ```
-   grep -n '^### TC-\|^\*\*R@' tasks/{KEY}/exec/exec.md
-   ```
+3. **Build Index**:
+   - Index TC positions and result lines:
+     ```bash
+     grep -n '^### TC-\|^- .* · [⏳✅❌🚫]' tasks/{KEY}/exec/exec.md
+     ```
+   - The status glyph is what makes a result line a result line. Without it the pattern also matches
+     `## Execution Context` bullets — `- **Platforms** — Back Office · Member app` — and the resume
+     protocol reads them as TCs. Never loosen it.
+   - A result write replaces one line with one line. Re-index only after a line actually moves — a
+     compaction recovery, or a hand edit.
 
-   It stays valid for the whole run: recording a result replaces one line with one line, so no line moves.
-   The result lines are authoritative. Never read § Results Summary to decide what to run — it is stale until
-   Phase 3 rewrites it.
+4. **Preflight Checks**:
+   - **Platform**: Confirm device/URL availability per pack § Preflight. Compare observed build against `exec.md` § Preflight: If plan build is:
+      - `unknown` → Update plan row with observed build and continue.
+      - Disagrees with observed build → STOP and ask user. (Disagreement invalidates recon passes: reset `verified at recon` results to `⏳ PENDING`).
+   - **Data**: Verify existence of all prerequisites in `## Preflight` → `### Data`. Block dependent TCs if data is missing.
 
-3. **Target preflight.** Per Preflight § Targets row — a device target: `mobile_list_available_devices`,
-   confirm it is present. A web target: confirm the URL responds. Then compare the build: `unknown` in the
-   plan → write the build you observe into the row and continue; a build that disagrees with a stated one →
-   stop and ask, because results against the wrong build prove nothing.
-4. **Data preflight.** Confirm every Preflight § Data item exists. The row names the TCs it blocks.
-5. **Resume.** Read the index's result lines, each target independently:
-   - `PASSED` → skip that target. Never re-run it, never overwrite its evidence.
-   - `PENDING` → execute it.
-   - `FAILED` / `BLOCKED` → ask whether to retry or keep. Keep → skip that target, its result stands. Retry →
-     set the line back to `PENDING`, clear its notes, run that target again from the TC's first step, and
-     overwrite that target's evidence.
-   - A `bo+app` TC resumes per pair — a pair is one unit of work, never one per surface.
-6. State the preflight results and the resume plan before executing: per target, how many TCs run, how many
-   are skipped, how many are blocked and on what.
+5. **Resume State Protocol**:
+   - Read index result lines per platform:
+     - `✅ PASSED`: Skip (do not re-execute or overwrite evidence).
+     - `⏳ PENDING`: Queue for execution.
+     - `❌ FAILED` / `🚫 BLOCKED`: Prompt user (Retry or Keep). Retrying resets status to `⏳ PENDING` and clears prior result prose.
+   - Cross-platform pairs execute/resume as a single unit.
 
-Done when: header and index are in hand, both preflights are resolved, every preflight block is written to
-its result lines, the resume plan is stated per target — and no TC block has been read yet.
+Done when: Header, registry, index, and evidence destination are loaded; preflights pass; resume strategy is stated per platform.
 
-## Phase 2 — Execute by wave
+---
 
-At the first wave on a target kind, load `.kiro/steering/capture-mechanics.md` and its row for that kind.
-Never load the other kind's files.
+## Phase 2 — Execute by Wave
 
-Waves run in the order the Waves table lists them. Open each wave with the reset its `Reset` column states —
-a wave stating one clause per driver applies both — and open as many sessions as `Contexts` states.
+**HARD GATE — do not start Wave 1 until all items below are confirmed loaded into context:**
+`.kiro/docs/lessons.md`
+`.kiro/steering/capture-mechanics.md`
+- Group = `web`: `.kiro/steering/capture-web.md`, `.kiro/steering/playwright-rule.md`
+- Group = `device`: `.kiro/steering/capture-device.md`, `.kiro/steering/maestro-rule.md`
 
-- **A `bo` or `app` wave** runs on every target in its `Targets` column, **one target to completion before
-  the next**.
-- **A `bo+app` wave** runs once per **pair**, with both sessions open together for the whole pair. Never
-  split a pair into two sequential passes: half a flow run twice is not the flow.
+Missing any → load it now. **Skipping this gate is not permitted.**
 
-Then, for each target — or pair — in turn, taking only the targets Phase 1 left runnable, and per group in
-the wave:
+Run waves sequentially as defined in `## Waves`. Execute wave `Reset` action and open specified `Sessions` count before starting wave TCs:
+- **Single-group wave**: Run on platforms in `Platforms` column, completing one platform fully before starting the next.
+- **Cross-platform wave**: Open both sessions simultaneously; run once per pair.
 
-1. **Slice it.** `{start}` = the group's first TC line from the index; `{end}` = the next TC's line − 1, or
-   `$` for the last group:
+---
 
-   ```
-   sed -n '{start},{end}p' tasks/{KEY}/exec/exec.md
-   ```
+### TC Slicing & Micro-Execution Loop
 
-   Read only the group about to run. Never widen the range "to have context", never execute a TC from a
-   summarised or remembered block, and never read the file whole. A slice not beginning with `### TC-` means
-   the index is stale: re-index and re-slice.
-
-2. **Run each TC in it**, in plan order, by the five steps below. Skip a TC whose `**Tgt:**` excludes the
-   target in hand.
-3. **Capture the group's evidence** — see *After the group*, below.
-
-### 1. Precondition
-
-Navigate to the screen and account state `**Pre:**` names. No `**Pre:**` line means the TC continues from the
-previous one: confirm that state is still current instead of re-navigating.
-
-### 2. Steps
-
-Follow `**Steps:**` exactly as written, taking any `**Steps@{targets}:**` override that names the target in
-hand, and each element's target string from Target Inventory. On a `bo+app` TC every step carries an `@app` or `@bo` tag: execute it in the session that tag names,
-switching between steps and leaving both open throughout. An untagged step on a paired TC is an incomplete
-plan — stop and say so rather than guessing a surface.
-
-Where every TC in the group is `**Mut:** no` and they share a screen, assert them in one pass. Every
-`**Mut:** yes` TC runs as its own pass.
-
-### 3. Assert
-
-Assert every `**Exp:**` checkpoint against the observable it names, and record what was observed, keyed by
-its checkpoint id. On a `bo+app` TC assert each checkpoint in the session its tag names.
-
-In `screenshot` mode the checkpoint's frame is captured **here**, at the assertion moment, under the stem its
-Checkpoint Evidence row carries — then the frame is verified, per `.kiro/steering/capture-mechanics.md`. No
-`.md` is written beside it. The result still comes from the observed fact, never from the frame.
-
-On a failed assertion, before writing the result:
-
-1. Re-run the assertion once. Record `2/2` where it failed both times, `1/2` where it passed on the retry.
-   `1/2` is intermittent, not a certain defect.
-2. Run the backend check the checkpoint names — endpoints and their bearer token live in
-   `.kiro/locator-cache.json` § `api`. Record its status and compared values, or `not checked` where the
-   checkpoint names none.
-3. Device target: `mobile_list_crashes` — record any crash ID new to this run, and fetch it. Web target: read
-   `browser_console_messages` and record the errors.
-4. Capture the diagnostic log — device logs per `.kiro/steering/mobile-mcp-rule.md` § Diagnostic Rules,
-   network entries per `browser_network_requests`. Record only the lines naming the app under test.
-
-### 4. Record the result
-
-Replace this TC's `**R@{target}:**` line for the target in hand — one line for one line:
-
-```
-**R@{target}:** {PASSED|FAILED|BLOCKED} · {YYYY-MM-DD HH:MM} · {BUG-ID} · {notes}
+Slice each runnable TC block:
+```bash
+sed -n '{start_line},{end_line}p' tasks/{KEY}/exec/exec.md
 ```
 
-Omit `{BUG-ID}` while none is filed. Notes carry, as they apply: observed against expected, the repro count,
-the backend check, the crash ID or console error, the blocker on a block, any target string that changed, and
-any capture that could not be produced. Never write the evidence path — it derives from the stem.
+Execute each sliced TC using the 5 steps:
 
-On a `bo+app` TC, name the surface the failure happened on in the notes; never split one flow into a pass on
-one surface and a fail on the other.
+1. **Precondition**: Navigate to specified account/screen. If omitted, confirm current state matches previous TC output.
+2. **Steps**: Execute steps strictly. Apply `Steps on {platform}` overrides where applicable. For cross-platform flows, switch between open sessions per step prefix.
+3. **Assert**: Verify `Expected` assertions against pack observables (not screenshots).
+   - In `screenshot` mode, capture frame at assertion moment using stem from `## Evidence` → `### Frames`.
+   - Record the verdict from the assertion, not the frame. Image read-back belongs to the auditor —
+     see `capture-mechanics.md` § Verify.
+   - **On Assertion Failure**:
+     1. Re-run assertion once (log `2/2` for persistent failure, `1/2` for intermittent).
+     2. Perform backend API check if endpoint is named in assertion. Endpoints and their bearer token come
+        from the section that platform's pack names under § Observables — extract that section alone,
+        never the file: `jq '.{section}' .kiro/locator-cache.json`.
+     3. Check console/crash logs per pack § Observables.
+     4. Capture diagnostic logs if bug report is required.
+4. **Record Result**: Rewrite this TC's result line in `exec.md`, **one line for one line**:
+   `- {platform label} · {✅ PASSED | ❌ FAILED | 🚫 BLOCKED} · {YYYY-MM-DD HH:MM} · {notes}`
+   Notes ride on the same line, `·`-separated, carrying what applies: observed against expected, repro count (`2/2`), backend check, crash id or console error, the blocker on a block, any target string that changed, any capture that could not be produced. Never indent detail beneath the line — the report is where these expand into fields.
+   **No re-index.** Take the timestamp from `date '+%Y-%m-%d %H:%M'`, never from memory.
+5. **Teardown**: Execute explicit teardown steps. Continue to next TC regardless of pass/fail result.
 
-Done when: the file on disk shows this TC's real status for this target, and its line count is unchanged.
+---
 
-### 5. Teardown
+### Group Evidence & Parallel Upload Protocol
 
-Execute `**Teardown:**` exactly as written, in the session each tagged step names. No `**Teardown:**` line =
-none needed. Continue to the next TC whatever this TC's result.
+- **`screenshot` Mode**: Frames captured inline during Step 3 using `capture-web.md` or `capture-device.md` per active platform.
+- **`normal` Mode**: disclose_context("capture-evidence") with `targets={active platforms}`, `type={the group's Type, lowercased}`, `stem={stem}`, `dest=tasks/{KEY}/exec/evidence/`, `element={the asserted element's id=/desc=/text=}`, `label={what is being verified}`, and `annotation={annotations}` from the header — per group after the group finishes testing.
+  - `type` is the `Type` cell of that group's row in `## Evidence` → `### Groups` — `SCREENSHOT` or `VIDEO`, decided at design time; lowercase it for this call. The plan is binding here as everywhere: never substitute a type.
+  - `element` and `label` come from the group's TC assertion: `element` is the asserted element's `id=`/`desc=`/`text=`, `label` is what is being verified.
+- **Tally the capture, never upload it**:
+  1. Write the TC result line into `exec.md` in the main session. **The result write never leaves this session** — a background writer racing the line index is how a result lands on the wrong TC.
+  2. Add one line to this wave's upload tally, held in context:
+     `{TC id} · {captured path} · {dest}`
+     `{dest}` is the Phase 1 string. A capture that must land under a per-TC section carries that TC's own case name — `doc:{docId}#{TC case name}`. One capture going to several places is one tally line per place.
+  3. **On `❌ FAILED` or `🚫 BLOCKED`, write the verdict into the doc section**: the marker word alone
+     (bold, red), then italic `Actual: {observed}` and `Expected: {per the requirement}`, one sentence each.
+  4. **Advance to the next TC.** Do not run the upload CLI, do not poll the worker, and never invoke `docs-media` or a Drive MCP tool for a capture the tally already holds.
+- **At wave close, hand the tally off and keep testing.** Dispatch the `evidence-uploader` agent **in the background** with `{KEY}`, `wave={label}`, and the tally verbatim. It queues, drains, verifies, heals, and writes `tasks/{KEY}/exec/.upload/ledger-{wave}.md` while the next wave runs.
+  - **Never wait on it.** Start the next wave in the same message that dispatches it. Do not read its ledger mid-run — its report arrives on its own, and its `Failed` and `Still queued` lines are what Phase 3 carries into the report.
+  - One uploader per wave, and none for a wave that produced no capture.
+- No Agent tool in context → queue inline instead, one call per capture, and reconcile in Phase 3:
+  ```bash
+  .venv/bin/python3 scripts/evidence_upload.py add --key {KEY} --file {captured path} --dest '{the Phase 1 dest}'
+  ```
+  It returns in milliseconds — a job file, no network I/O. Repeat `--dest` for several destinations. The CLI is idempotent on `(file bytes, dest)`, so re-queuing a capture that already went is a no-op; `--force` overrides that, and is only ever for a capture that genuinely changed.
 
-### After the group — capture the evidence
+---
 
-`screenshot` mode captured its frames inline at step 3; nothing more happens here.
+### Evidence Verification
 
-`normal` mode: once the whole group has been tested, replay it once per target into the capture its Evidence
-Groups row states — its type, its stem, and `**Cap:**` for the moment each checkpoint must show. Write the
-file per `.kiro/steering/capture-mechanics.md`, then verify it there. Write no `.md` beside it — the elapsed
-second each checkpoint lands on goes in this TC's result note.
+Verification standards per capture type live in `capture-mechanics.md` § Verify. The auditor applies them; this session records verdicts from assertions.
 
+---
 
-### Per wave
+## Failure Paths
 
-Collect the crash IDs, console errors and log lines every failure in the wave produced. They belong in report
-Notes; a crash or an app-side error on a failing TC is FE evidence for `report-bug`.
-
-## Failure paths
-
-| What happened | The one outcome |
+| Event | Action / Resolution |
 |---|---|
-| A target is absent at preflight | every result line for that target → `BLOCKED`, naming it. Every other target still runs. |
-| A Preflight § Data item is missing | every TC that row names → `BLOCKED` on all its targets, naming the item |
-| An account cannot log in at the first TC needing it | every TC whose `**Pre:**` names it → `BLOCKED` on that target, naming the account |
-| A target string will not resolve | recover per the driver rule — `playwright-rule.md` § Locator Recovery, `mobile-mcp-rule.md` § Element Resolution Rules. Recovered: update Target Inventory and restart the TC from step 1. Not recovered: `BLOCKED`, naming the element and its screen. Never a guessed tap. |
-| An assertion fails | the failure protocol at step 3, then `FAILED`, then the next TC |
-| A capture fails or cannot be verified | re-capture once; still failing → note it in the result |
-| The app crashes mid-TC | `FAILED` carrying the crash ID; re-apply the wave's `Reset` before the next TC |
-| The wave's state cannot be recovered | the wave's remaining TCs on that target → `BLOCKED`, naming the cause. The next wave still runs. |
-| A wave's precondition is a state a later wave creates | run it just after that wave and restore the state; log the move and the restore in the result line. Never reorder on a guess about data. |
-| Context is lost or compacted mid-run | re-read the header, re-index, re-slice the current group |
-| `finalise` finds no `report.md` | STOP — Phases 1–3 have not run |
+| **Platform Absent at Preflight** | Mark all platform results `🚫 BLOCKED`. Remaining platforms execute normally. |
+| **Missing Preflight Data** | Mark dependent TCs `🚫 BLOCKED` on all platforms naming the data item. |
+| **Account Login Failure** | Mark TCs requiring account `🚫 BLOCKED` on affected platform. |
+| **Unresolvable Element Target** | Recover per driver rule. If unrecovered: update `Target Inventory`, mark `🚫 BLOCKED`. No guessed taps. |
+| **Capture Failure** | Retry capture once. If still failing, log anomaly in result prose; do not alter test verdict. |
+| **App Crash** | Set `❌ FAILED` with crash ID. Re-apply wave `Reset` before executing next TC. |
+| **Wave State Unrecoverable** | Mark remaining TCs in wave `🚫 BLOCKED`. Proceed to next wave. |
+| **Wave Precondition Created by Later Wave** | Execute dependent wave immediately after the wave creating required state, restore state, and log the move. Never reorder on a guess about data. |
+
+---
 
 ## Phase 3 — Report
 
-1. Re-read the index. A line still `PENDING` never ran: run it, or write `BLOCKED` with the reason it did not.
-   Then regenerate `exec.md` § Results Summary from the result lines — once, here, and nowhere else.
-2. `ls tasks/{KEY}/exec/evidence/` — confirm every file the plan names is there, and that nothing else is. Note any that
-   is missing.
-3. Write `tasks/{KEY}/exec/report.md` from `REPORT.md`, filling every section it defines. Its content comes from
-   three places already in hand: the exec header (Metadata, Preflight § Targets, AC Coverage, Skipped), the
-   index (TC Results, and Executed At from the earliest and latest result timestamps), and the result notes
-   (everything else). Re-slice a failing TC's block only for its `**Exp:**` text.
-4. Judge every failure. Caused by the product → a Bugs Found row **and** a Failed & Blocked Details entry.
-   Caused by the environment, the data, or the plan → the entry alone, carrying the reason it is not a defect.
-5. Build Target Differences by comparing the per-target notes of every TC that ran on more than one target. A
-   single-target run writes *None*.
-6. A reusable lesson the run turned up — a locator that moved, a fixture that lies, an env quirk that cost a
-   re-run → append one bullet to `.kiro/docs/lessons.md` with `{KEY}` and the date. A lesson a rule file
-   already owns goes in that rule file instead, per that file's header. Nothing reusable → skip.
-7. Present the Summary table, Bugs Found, Target Differences, and every failed or blocked TC.
+1. **Final Index Audit**: Ensure no TC remains `⏳ PENDING`. Convert unexecuted TCs to `🚫 BLOCKED` with cause.
+2. **Flush Uploads**: collect the wave uploaders, drain the tail, then reconcile — a missing upload must never reach the report unnoticed.
+   - **Wait for every wave uploader to report before running anything below.** Each uploader's `Failed` and `Still queued` lines then carry into the report verbatim.
+   - **Then stop the worker before draining, never alongside it:**
+     ```bash
+     .venv/bin/python3 scripts/evidence_upload.py wait --key {KEY} --timeout 300   # let the live worker finish
+     .venv/bin/python3 scripts/evidence_upload.py stop --key {KEY}                 # the run is over; the worker goes with it
+     .venv/bin/python3 scripts/evidence_upload.py serve --key {KEY} --once         # drain the tail, then exit
+     ```
+     `wait` exiting `3` means the worker is already gone — go straight to `serve --once`.
+   Then dispatch the `evidence-auditor` agent for `{KEY}` with the destination and the wave ledger paths
+   (`tasks/{KEY}/exec/.upload/ledger-*.md`). Its `Missing` and `Anomalies` lines go into the report
+   verbatim: never report evidence as captured when its upload did not land. Re-read no capture in this
+   phase.
 
-Done when: `report.md` is complete, no result line is still `PENDING`, every AC carries a result, every
-failure carries its repro count and backend check, and every failure sits either under Bugs Found or with the
-reason it is not a defect.
-
-## Phase 4 — Finalise (`finalise` arg only)
-
-Runs after `report-bug` filed the confirmed defects. Edits `report.md` and `exec.md` only — posts nothing to
-Jira. It changes no status, so no count is recomputed.
-
-1. Read `tasks/{KEY}/exec/report.md`. List every Bugs Found row still carrying `—` in its Bug column. None left →
-   say so and stop.
-2. Take the `{TC-ID} → {BUG-KEY}` pairs from the invocation. List every row still unpaired and ask: filed
-   under which key, or declined. Never guess a key.
-3. Per pair, write the key in the two places that hold one — the Bugs Found row, and the failing target's
-   result line in `exec.md`, which is what a later resume reads:
-
+   No Agent tool in context → reconcile here:
+   ```bash
+   .venv/bin/python3 scripts/evidence_upload.py status --key {KEY} --json
    ```
-   grep -n '^### TC-\|^\*\*R@' tasks/{KEY}/exec/exec.md
-   ```
+   `status` exits `0` only when nothing is queued and nothing failed; `2` means work is outstanding, and it names every failure with its error. Failures → `retry --key {KEY}`, then `serve --key {KEY} --once`, then check again. Still failing after one retry → carry the file name and the error into the report.
+3. **Generate Report**: Write `tasks/{KEY}/exec/report.md` from `REPORT.md`. Its Evidence column and any
+   landed URLs come from the wave ledgers (`tasks/{KEY}/exec/.upload/ledger-*.md`), not re-derived from
+   `exec.md`.
+4. **Lessons Learned**: Append reusable execution lessons to `.kiro/docs/lessons.md`
+5. Present the execution summary, platform differences, and the failed/blocked breakdown. Leave the bug candidates to Phase 4 — it presents them as the list the user picks from.
 
-4. Move every declined candidate to `## Rejected Candidates` with its reason, and drop its Bugs Found row.
-5. Present what changed: each TC with the key it now carries, and each declined candidate with its reason.
+Done when: `report.md` is complete, no TCs are pending, and every failure sits either in `## Bugs Found` or in `## Failed & Blocked` with the reason it is not a defect.
 
-Done when: every Bugs Found row carries a bug key, every declined candidate sits under Rejected Candidates
-with its reason, and every failed target's result line carries the same key as its report row.
+---
+
+## Phase 4 — Triage & File
+
+Runs straight after Phase 3, and re-enterable alone with `finalise` when a session ends mid-triage. Edits
+`report.md` and nothing else — it posts no Jira comment and changes no TC status.
+
+1. **Present the candidates.** Every `## Bugs Found` row still carrying `—` in its Bug column, numbered, each
+   with: TC id and title, platforms it reproduced on, what is wrong, repro count (`2/2` \| `1/2`), backend
+   check result, and the evidence file. None left → say so and stop.
+
+   **First, check for duplicates.** Dispatch one `dup-scout` agent per candidate, **all in one message** — the
+   searches are independent. Each returns a verdict and candidate keys. Attach that verdict to the candidate
+   when you present it, so the user chooses knowing whether the bug is already filed. A `duplicate of {KEY}`
+   verdict is information for the user, not a decision: they may still file.
+
+   No Agent tool in context → grep `tasks/*/exec/report.md` for the symptom and check the parent's existing
+   SIT Bug sub-tasks, then present what you found the same way.
+2. **Ask, per candidate: file or decline.** Use `AskUserQuestion`. A declined candidate needs a reason. Never
+   file a bug the user did not pick, and never guess a key that was not returned to you.
+3. **File each chosen candidate**: disclose_context("report-bug"), one per candidate, with the full payload —
+   TC id and title, symptom, expected behavior, platforms it reproduced on, repro count, backend check
+   result, and the existing evidence file path. The capture is already taken: `report-bug` must not
+   re-capture or delete it. Take the key it returns.
+4. **Write the key into the two cells that hold one** — the `## Bugs Found` row, and the same TC's row in
+   `## Result by Test Case`. Both are in `report.md`. `exec.md` is not touched.
+5. **Move every declined candidate** to `## Rejected Candidates` with its reason, and drop its `## Bugs Found`
+   row.
+6. **Present the final mapping**: each TC with the key it now carries, and each declined candidate with its
+   reason.
+
+`1/2` is intermittent, not a certain defect — say so when presenting it, and let the user decide.
+
+Done when: every `## Bugs Found` row carries a bug key, every declined candidate sits under
+`## Rejected Candidates` with its reason, and every filed key appears in both tables that carry one.
+

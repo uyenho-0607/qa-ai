@@ -1,0 +1,17 @@
+# Subflow: Select a single currency from the currency sheet
+# Precondition: Currency sheet is already open (after tapping "Select currencies")
+# Env: CURRENCY_CODE (e.g. SGD), CURRENCY_NAME (e.g. Singapore Dollar)
+# Note: scroll-based selection avoids the search+hideKeyboard timing issue
+appId: com.bfgto.sit.app
+---
+- scrollUntilVisible:
+    element:
+      text: ${CURRENCY_NAME}
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    text: ${CURRENCY_NAME}
+- waitForAnimationToEnd
+- tapOn:
+    text: "Done"
+- waitForAnimationToEnd

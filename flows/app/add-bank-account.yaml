@@ -1,0 +1,140 @@
+# Flow: Add a new bank account
+# Usage: maestro test flows/app/add-bank-account.yaml \
+#   -e LABEL="My Test Account" \
+#   -e COUNTRY_NAME="Singapore" \
+#   -e BANK_NAME="DBS Bank" \
+#   -e CURRENCY_NAME="Singapore Dollar" \
+#   -e ACCOUNT_NAME="BUN BO" \
+#   -e ACCOUNT_NUMBER="1111222233334444" \
+#   -e BIC_SWIFT="DBSSSGSG" \
+#   -e ADDRESS="1 Marina Blvd" \
+#   -e CITY="Singapore" \
+#   -e OTP="123456" \
+#   -e PASSCODE="111111"
+#
+# Precondition: App is running (may be on passcode or home screen)
+appId: com.bfgto.sit.app
+env:
+  PASSCODE: "111111"
+  LABEL: "My DBS Account"
+  COUNTRY_NAME: "Singapore"
+  BANK_NAME: "DBS Bank"
+  CURRENCY_NAME: "Singapore Dollar"
+  ACCOUNT_NAME: "BUN BO"
+  ACCOUNT_NUMBER: "9876543210"
+  BIC_SWIFT: "DBSSSGSG"
+  ADDRESS: "1 Marina Blvd"
+  CITY: "Singapore"
+  OTP: ""
+---
+# Launch app
+- launchApp
+# launchApp's RN cold start (~3s) beats waitForAnimationToEnd, which has
+# nothing to wait for on a still-blank frame — gate on a concrete screen
+# instead, whichever one comes up (locked or already unlocked).
+- extendedWaitUntil:
+    visible: "Enter your app passcode to unlock\\.|Account"
+    timeout: 15000
+
+# Unlock if needed
+- runFlow:
+    file: subflows/unlock.yaml
+
+# Navigate to Linked bank accounts
+- runFlow:
+    file: subflows/nav-linked-bank-accounts.yaml
+
+# Tap add button (header icon, top-right)
+- tapOn:
+    point: "94%,8%"
+    label: "Add bank account header icon"
+- waitForAnimationToEnd
+- assertVisible: "Add bank account"
+
+# Fill Label
+- tapOn:
+    text: "e.g. Main USD Account"
+- eraseText: 50
+- inputText: ${LABEL}
+- hideKeyboard
+
+# Select bank country
+- tapOn:
+    text: "Select country"
+- waitForAnimationToEnd
+- runFlow:
+    file: subflows/select-bank-country.yaml
+
+# Fill bank name
+- tapOn:
+    text: "e.g. DBS Bank"
+- inputText: ${BANK_NAME}
+- hideKeyboard
+
+# Select currency
+- tapOn:
+    text: "Select currencies"
+- waitForAnimationToEnd
+- runFlow:
+    file: subflows/select-currency.yaml
+
+# Fill account name
+- scrollUntilVisible:
+    element:
+      text: "Enter account name"
+    direction: DOWN
+- tapOn:
+    text: "Enter account name"
+- inputText: ${ACCOUNT_NAME}
+- hideKeyboard
+
+# Fill account number
+- scrollUntilVisible:
+    element:
+      text: "Enter account number or IBAN"
+    direction: DOWN
+- tapOn:
+    text: "Enter account number or IBAN"
+- inputText: ${ACCOUNT_NUMBER}
+- hideKeyboard
+
+# Fill BIC/SWIFT
+- tapOn:
+    text: "e.g. DBSSSGSG"
+- inputText: ${BIC_SWIFT}
+- hideKeyboard
+
+# Fill address
+- tapOn:
+    text: "Enter street address"
+- inputText: ${ADDRESS}
+- hideKeyboard
+
+# Fill city
+- tapOn:
+    text: "Enter city"
+- inputText: ${CITY}
+- hideKeyboard
+
+# Continue to review
+- tapOn:
+    text: "Continue"
+- waitForAnimationToEnd
+- assertVisible: "Review bank account"
+
+# Save
+- tapOn:
+    text: "Save bank account"
+- waitForAnimationToEnd
+
+# Enter OTP via reusable subflow
+- runFlow:
+    when:
+      visible: "Verify your email"
+    commands:
+      - runFlow:
+          file: subflows/verify-email-otp.yaml
+
+# Assert success — back on listing with new account
+- assertVisible: "Linked bank accounts"
+- assertVisible: ${LABEL}

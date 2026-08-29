@@ -4,6 +4,7 @@ Shape: `.kiro/platforms/TEMPLATE.md`. Loaded only when a `bo*` platform is enabl
 `.kiro/steering/project-config.md` § Platforms.
 
 Domain: `.kiro/domain/otc-bo.md`, roles under § Roles & Permissions.
+Shared across platforms — password policy, OTP, statuses, decimal precision: `.kiro/domain/otc-shared.md`.
 Cached locators: `.kiro/locator-cache.json` § `otc-bo`.
 
 ## Targets
@@ -61,5 +62,19 @@ A wave depending on a logged-out start states `fresh context`; the runner never 
 ## Preflight
 
 - URL: `BO_URL` from `project-config.md` § Environment — confirm it responds
-- Browser: chromium. `bo` at desktop size, `bo-mv` at 390×844
+- Browser: chromium. Each target at the `Viewport` its § Targets row gives
 - Build: the page footer, or `unknown`
+
+## Stack quirks
+
+Values `playwright-rule.md` and `capture-web.md` name as placeholders and never hardcode:
+
+| Placeholder | Value here |
+|---|---|
+| component library | Ant Design |
+| hidden-state overlay class | `.ant-dropdown:not(.ant-dropdown-hidden) …` — a closed dropdown stays mounted |
+| `{scroll container selector}` | `[data-testid*="table-scroll-container"]` |
+| `API_PATHS` | `['/api/', '/backoffice/']` |
+
+A fixed-position drawer has `offsetParent === null` here, so that is not a visibility test — filter
+`[role=dialog]` by `getBoundingClientRect().width > 0` instead.

@@ -1,8 +1,8 @@
 """Upload attachments to a Jira issue. Nothing else.
 
 Usage:
-    .venv/bin/python ~/.kiro/skills/jira-handler/jira_attach.py --issue OMS-807 --file ./video.mp4 --filename name.mp4
-    .venv/bin/python ~/.kiro/skills/jira-handler/jira_attach.py --issue OMS-807 --file ./a.png --filename a.png --file ./b.mp4 --filename b.mp4
+    .venv/bin/python3 .kiro/skills/jira-handler/jira_attach.py --issue OMS-807 --file ./video.mp4 --filename name.mp4
+    .venv/bin/python3 .kiro/skills/jira-handler/jira_attach.py --issue OMS-807 --file ./a.png --filename a.png --file ./b.mp4 --filename b.mp4
 """
 
 import argparse
@@ -17,7 +17,7 @@ def main():
     parser = argparse.ArgumentParser(description="Upload attachments to Jira")
     parser.add_argument("--issue", required=True, help="Jira issue key")
     parser.add_argument(
-        "--file", action="append", required=True, help="File path (repeatable)"
+        "--file", action="append", help="File path (repeatable)"
     )
     parser.add_argument(
         "--filename",
@@ -41,12 +41,13 @@ def main():
             print(f"Deleted attachment {att_id}")
 
     # Upload
-    filenames = args.filename or []
-    for i, filepath in enumerate(args.file):
-        fname = filenames[i] if i < len(filenames) else Path(filepath).name
-        att = jira.add_attachment(issue=args.issue, attachment=filepath, filename=fname)
-        att_id = att.id if hasattr(att, "id") else None
-        print(f"Attached {fname} to {args.issue} (id={att_id})")
+    if args.file:
+        filenames = args.filename or []
+        for i, filepath in enumerate(args.file):
+            fname = filenames[i] if i < len(filenames) else Path(filepath).name
+            att = jira.add_attachment(issue=args.issue, attachment=filepath, filename=fname)
+            att_id = att.id if hasattr(att, "id") else None
+            print(f"Attached {fname} to {args.issue} (id={att_id})")
 
 
 if __name__ == "__main__":

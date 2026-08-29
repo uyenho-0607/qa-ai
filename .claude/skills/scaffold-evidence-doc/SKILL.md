@@ -1,6 +1,6 @@
 ---
 name: scaffold-evidence-doc
-description: Scaffold a Google Doc of Testmo case names — one heading per case, blank space beneath for pasting screenshots. Use when asked for a test evidence doc for a ticket, /evidence-doc.
+description: Scaffold a Google Doc of Testmo case names — one plain-paragraph section per case, blank space beneath for pasting screenshots. Use when asked for a test evidence doc for a ticket, /evidence-doc.
 ---
 
 # Scaffold Evidence Doc
@@ -14,28 +14,38 @@ Build the empty container a tester fills by hand. This makes the document; `capt
 | | |
 |---|---|
 | **Args** | `{KEY}` [, platform] [, Drive folder URL] |
-| **Reads** | `.claude/steering/testmo.md` — Testmo project ids and Configuration names |
-| **Testmo** | `testmo_find_cases_by_issue` — names only, no per-case fetch |
-| **Docs** | `mcp__google-docs__createDocument` |
+| **Reads** | `awk '/^## /{p = /Configurations by Project/} p' .claude/steering/testmo.md` — valid platform tag names; `tasks/{KEY}/base/tc.md`, `tasks/{KEY}/gen/manual-tcs.md`, `tasks/{KEY}/base/jira.md` |
+| **Docs** | `mcp__google-docs__createDocument`, `mcp__google-docs__moveFile` |
+| **Producers** | `tasks/{KEY}/base/tc.md` missing → `/collect-testmo-cases {KEY} save`; `tasks/{KEY}/base/jira.md` missing → `/jira-retriever {KEY} save` (see project-config.md § Producers) |
 | **Writes** | one Google Doc; no repo file |
 
-Case names come from the repository, not from a run: `testmo_list_run_results` returns only tests that already carry a submitted result, which is empty at the moment an evidence doc is needed.
+Case names come from the Testmo case repository, not from a run.
 
 ---
 
 ## 1. Collect case names
 
-`tasks/{KEY}/base/tc.md` exists → read the names from its `## ` headings and skip the Testmo call. Those headings read `{KEY}_TC-NN — {name}`; keep only the part after the em dash.
+`tasks/{KEY}/base/tc.md` exists → read the names from it:
 
-Otherwise resolve `{KEY}`'s project id from `.claude/steering/testmo.md` and call `testmo_find_cases_by_issue(projectId, issueKey: "{KEY}")`. Parse every `"<caseId> <caseName>"` entry, keeping its folder grouping and the response's order.
+```
+grep -n '^#### \|^### ' tasks/{KEY}/base/tc.md
+```
 
-No cases returned → report that and stop. Offer `collect-testmo-cases` or a folder name to search instead, and invent nothing.
+Each `#### TC-{testmoId} · {name}` line names one case — split on the middle dot `·` and keep the part after it. Each case's folder is the nearest preceding `### {folder} ({n} cases)` line.
+
+Missing → stop and name `/collect-testmo-cases {KEY} save`.
 
 **Done when:** every case name is recorded with its folder, the total is stated, and no name still carries a TC-id prefix.
 
 ## 2. Confirm scope
 
-Platform tags come from the TC set, not from a guess: read the `Configuration` values in `tasks/{KEY}/gen/manual-tcs.md` when it exists, and propose every distinct value. A set spanning platforms keeps all of them — `Android app; iOS app` is one valid tag, not a choice between two. Every name must match `.claude/steering/testmo.md`.
+Platform tags come from the TC set, not from a guess: read the single `Configuration` header field in `tasks/{KEY}/gen/manual-tcs.md` when it exists:
+
+```
+grep -m1 '\*\*Configuration:\*\*' tasks/{KEY}/gen/manual-tcs.md
+```
+
+Propose that value verbatim — a set spanning platforms already reads as one `;`-joined list, e.g. `Android app; iOS app`, not a choice between two. Every name must match `.claude/steering/testmo.md` § Configurations by Project.
 
 Present the folder groups and the total, then ask in one message:
 
@@ -50,9 +60,15 @@ Scaffold the doc? (yes / adjust)
 ## 3. Create the doc
 
 Title: `[{KEY}] {Jira summary} ({Platform tag})`
-Example: `[AO-306] [OTC][MobileApp] Personal Onboarding (Android app; iOS app)`
+Example: `[{KEY}] [Module][Surface] Personal Onboarding (Admin BO; Android app)`
 
-Take the summary from the `## Title` line of `tasks/{KEY}/base/jira.md` when it exists; otherwise invoke `jira-retriever` with `{KEY}`.
+Take the summary from `tasks/{KEY}/base/jira.md`:
+
+```
+grep -A1 '^## Title' tasks/{KEY}/base/jira.md
+```
+
+Missing → stop and name `/jira-retriever {KEY} save`.
 
 One `createDocument` call carries the whole scaffold:
 
@@ -61,6 +77,13 @@ One `createDocument` call carries the whole scaffold:
 - `parentFolderId` — the folder id parsed from the Drive URL, when one was given.
 
 The case name stands alone: no numbering, no `Status:` line, no `Evidence:` label.
+
+`scripts/evidence_upload.py` § `_is_section_boundary` ends a section at the next paragraph carrying text. A stray line steals the anchor.
+
+Reserved, written by `manual-exec-run` only — never scaffold them:
+
+- `FAILED` `PASSED` `BLOCKED` `PENDING` `SKIPPED` — whole line
+- lines starting `Actual:` `Expected:` `Note:` `Bug:` `Evidence:`
 
 **Done when:** block count equals the Step 1 total.
 

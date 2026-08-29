@@ -1,14 +1,16 @@
 # QA Lessons
 
-One bullet per lesson, with its source ticket and date.
-
-A lesson a *rule file already owns* goes in that rule file instead — a capture mechanic in
-`.claude/steering/capture-*.md`, a driver quirk in the driver rule. Only what no rule file owns lands here.
-
 <!-- Add lessons below -->
-- **`download-jira-attachments.sh` writes to `.tmp/jira-tickets/{KEY}/attachments/`, not the
-  `tasks/{KEY}/base/attachments/` that `project-config.md` § Folder Structure documents.** Copy what you need
-  into `tasks/{KEY}/base/attachments/` after running it. (AO-925, 2026-08-26)
-- **A checkpoint asserting "the modal closed" can be sampled too early.** Polling that breaks as soon as a
-  success toast appears catches the toast while the modal is still mounted. Poll for *both* conditions, or
-  re-sample a few seconds later, before recording the result. (AO-925, 2026-08-28)
+- **A checkpoint asserting "the modal closed" can be sampled too early.** Polling that breaks as soon as a success toast appears catches the toast while the modal is still mounted. Poll for *both* conditions, or re-sample a few seconds later, before recording the result. (AO-925, 2026-08-28)
+- **Hand the wave's evidence tally to one `evidence-uploader` at wave close, then keep testing.** Do not dispatch an uploader per capture as each file lands on disk. (AO-925, 2026-08-30)
+- **A dead upload worker can still be an alive process.** `status` reported `worker_pid: null` while the process ran on, so a second drainer started and the two raced the same job file. Check `pgrep -f "evidence_upload.py serve"`, not just `status`. (AO-925, 2026-09-03)
+- **One upload *worker* live at a time — uploaders overlap, workers never do.** (AO-925, 2026-09-03)
+- **`hideKeyboard` after a self-submitting input exits the app.** Maestro's `hideKeyboard` is a Back press on Android. A passcode/OTP screen that submits on its last digit has already dismissed the keyboard, so Back navigates out — from a root screen that means the launcher, and the flow reports `success`. Drop it after any self-submitting field and gate on the next screen instead. (AO-925, 2026-09-03)
+- **`launchApp` needs an explicit readiness gate.** This RN app takes ~3 s to first render; `waitForAnimationToEnd` is not a barrier for it, so a conditional `runFlow: when: visible:` right after `launchApp` evaluates false and the block is skipped. Always `extendedWaitUntil` on something the target screen owns. (AO-925, 2026-09-03)
+- **Maestro `takeScreenshot` appends `.png` itself.** Passing `…/name.png` writes `name.png.png`. Pass the path with no extension. (AO-925, 2026-09-03)
+- **The first `inputText` after focusing an RN text field is silently swallowed.** A 6-digit OTP lands as 5 digits and the screen never self-submits; a long value lands truncated. Reproduced 4/4. Reliable pattern: type the value, `eraseText`, type it again — the second attempt lands in full. Always assert the field's value before moving on. (AO-925, 2026-09-03)
+- **`eraseText` does not reliably clear a long or multiline RN field, and retyping over it duplicates characters.** Observed `Accountt`, `Accounthtt`, and a 40-char wallet address concatenated onto its predecessor. Wrap tap → `eraseText` → `inputText` → `assertVisible` in `retry`, and prefer a freshly-mounted (empty) field: a single `inputText` into an empty field is exact. (AO-925, 2026-09-03)
+- **`swipe: direction: DOWN` can fire the system back gesture.** On this app it unmounted the form being filled instead of scrolling it. Use `scrollUntilVisible` with an element target; never a bare directional swipe to scroll a form. (AO-925, 2026-09-03)
+- **A Back Office empty state can be a dependency failure, not empty data.** The Withdrawal Accounts tab resolves `profileId` from `identification/applicant/{memberId}`; while that returned 500 the tab rendered `No bank accounts` for a member holding 5 records. Before believing a list is empty, check the dependency call and the record endpoint directly. (AO-925, 2026-09-03)
+- **BO access tokens expire within ~1 minute of idling, and a stale one causes a `/login` redirect loop.** Do `localStorage.clear()`, log in, navigate and assert inside a *single* driver call. And never mint a token out-of-band (`POST /api/auth/public/login`) for an account whose browser session is live — it invalidates that session. (AO-925, 2026-09-03)
+- **Separate a platform outage from the behaviour under test before recording a verdict.** A generic `Internal error` on submit looked like a duplicate-block rejection; it was the verbatim `message` of a COMMON-003 500 while `aqxotc-backoffice-service` was down. Probe the endpoints, mark 🚫 BLOCKED on attributability, and re-run once healthy — the re-run gave a genuine PASS with specific inline copy. (AO-925, 2026-09-03)

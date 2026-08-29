@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "mcp__google-docs__deleteFile"
+      "mcp__google-docs__deleteFile",
+      "Bash(python3 scripts/evidence_upload.py status --key AO-925 --json)"
     ]
   }
 }

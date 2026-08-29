@@ -1,11 +1,11 @@
 # TC Priority Guide
 
-Score every TC against the factors. Priority follows the decision table.
+Score every TC against the factors. Priority follows the decision rules, first match wins.
 
 ## Factors
 
 **Business Criticality**
-- High: core flow — deposit, withdrawal, login, place order, close position
+- High: core flow — login, sign up, convert, OTC approval, withdrawal, balance approval
 - Medium: supporting flow — settings, configuration
 - Low: display, cosmetic, rarely used
 
@@ -33,4 +33,4 @@ Score every TC against the factors. Priority follows the decision table.
 - 3+ High factors → **High**
 - Mostly Medium, no High → **Medium**
 - Mostly Low, cosmetic or edge only → **Low**
-- Mixed → apply business criticality as tiebreaker
+- Mixed → Business Criticality decides: High → **High**, Medium → **Medium**, Low → **Low**

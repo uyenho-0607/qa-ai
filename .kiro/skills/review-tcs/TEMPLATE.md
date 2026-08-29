@@ -1,5 +1,4 @@
-# TC Review — {KEY}
-# {ticket title}
+# TC Review — {KEY} · {ticket title}
 
 ---
 
@@ -59,3 +58,5 @@ Clean: {n} TCs with no finding.
 **Fix:** …
 
 - A finding covering several TCs names all of them in one entry.
+- Dimension headings appear in this order — COVERAGE, ORACLE, REPRO, FORM — even when empty; an empty dimension keeps its heading and reads `No findings.`
+- Finding ids run per dimension (`COV-`, `ORA-`, `REP-`, `FORM-`), zero-padded to two digits; the heading is the only place the grade (`fix` | `ask`) appears; one `---` between findings.

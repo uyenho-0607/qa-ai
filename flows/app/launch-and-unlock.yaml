@@ -1,0 +1,13 @@
+# Flow: Launch app and unlock with passcode
+# Reusable as a setup step or standalone smoke test
+# Env: PASSCODE (default 111111)
+appId: com.bfgto.sit.app
+env:
+  PASSCODE: "111111"
+---
+- launchApp:
+    stopApp: true
+- waitForAnimationToEnd
+- runFlow:
+    file: subflows/unlock.yaml
+- assertVisible: "Total balance · USD"
