@@ -1,6 +1,6 @@
-# Test Cases — {ISSUE-KEY}
+# Test Cases — {KEY}
 
-**Issue:** [{ISSUE-KEY}](https://aquariux.atlassian.net/browse/{ISSUE-KEY})
+**Issue:** [{KEY}](https://aquariux.atlassian.net/browse/{KEY})
 **Fetched:** {timestamp}
 **Total:** {N} cases
 
@@ -8,17 +8,17 @@
 
 | Status | Count |
 |---|---|
-| ✅ Automated (39) | N |
-| 🔧 Can Automate (37) | N |
-| 🚧 In Progress (38) | N |
-| ❌ Not Automatable (40) | N |
+| ✅ Automated | N |
+| 🔧 Can Automate | N |
+| 🚧 In Progress | N |
+| ❌ Not Automatable | N |
 | ⬜ Unset | N |
 
 | Priority | Count |
 |---|---|
-| High (54) | N |
-| Medium (55) | N |
-| Low (56) | N |
+| High | N |
+| Medium | N |
+| Low | N |
 
 ## Case Groups
 

@@ -1,6 +1,6 @@
 # Test Cases — {ISSUE-KEY}
 
-**Issue:** [{ISSUE-KEY}](https://aquariux.atlassian.net/browse/{ISSUE-KEY})
+**Issue:** [{ISSUE-KEY}](https://{JIRA_SITE}/browse/{ISSUE-KEY}) — `{JIRA_SITE}` from `.kiro/steering/jira.md` § Rovo MCP
 **Source:** Google Sheet
 **Total:** {N} cases
 

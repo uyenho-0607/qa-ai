@@ -1,52 +1,52 @@
 # Expected Result Strengthening
 
-**Shallow checking is the default failure. A TC's written expected result is the floor, not the target — if it changed on screen, verify it.** Design the depth in here: the run asserts exactly what `exec.md` states, and nothing more.
+## Domain Oracle Sourcing
+
+- Check `.claude/domain/flows.md` or platform domain files **before** writing expected results.
+- Quote and cite domain files directly for live-observed error text, validation rules, column sets, and state transitions.
+- Derive assertions from scratch **only** if no domain file records the observed value.
 
 ## Depth levels
 
-Assign every TC the levels it needs, each as its own checkpoint. Most TCs need 1 + 2.
+Assign every TC the levels it needs, each as its own numbered expected result. Most need 1 + 2.
 
-**Level 1 — Primary outcome** (the thing the TC is named after)
+**Level 1 — Primary outcome**
 - Toast / notification with the exact message text
 - Modal opened or closed
 - Element enabled, disabled, visible, or removed
 
-**Level 2 — Everything else that changed on the same screen**
+**Level 2 — On-Screen Side Effects**
 - Table → row added / removed / updated, row count, sort position, cell values
 - Form → fields cleared or retained, buttons re-enabled, validation messages gone
 - Status → badge text and colour, dependent columns
 - Counters, totals, timestamps → recalculated to the expected value
 - The return destination — did it stay on the modal or go back to the table?
 
-**Level 3 — Ripple beyond the screen**
+**Level 3 — System & Ripple Effects**
 - Audit log entry written, with the correct actor and action
 - A change on screen A reflected on screen B
 - Another session or role sees the correct state
-- Network: the expected API call fired — or, on invalid input, fired **not at all**
+- Network: the expected call fired — or, on invalid input, fired **not at all**
+  - *Note*: Network call assertions require network support under pack § Observables.
 
-A Level 3 network assertion is directly observable only where the surface pack lists network among its
-§ Observables. Where it does not, the pack states what the assertion becomes there.
+## Evaluation Checklist
+Before finalizing, ask:
+1. Are negative flows and implicit constraints checked (e.g., explicit list implies others are forbidden)?
+2. Is every assertion bound directly to a pack observable?
+3. Are all secondary on-screen state changes captured?
+*Rule: A single expected result is considered shallow unless the TC verifies a single static state*
 
-## Ask of every TC
+## Shallow vs. Deep Guidance
 
-1. Does it verify all specified behaviour, or only the happy path?
-2. Are implicit constraints checked? A list of allowed items implies no others are allowed.
-3. Is every assertion tied to an observable its surface pack lists, rather than to a visual assumption?
-4. What else on this screen changed that the TC does not mention?
+| Scenario | Shallow (Do Not Use) | Deep (Required Standard) |
+|---|---|---|
+| **Menu / List** | "Reset Password option is present" | Action menu contains **exactly 3** items in order: `View` → `Reset Password` → `Delete` |
+| **Validation** | "Error message appears" | Exact error text matches **AND** no `PUT /admin-users/{id}/password` call fires |
+| **Success** | "Success toast shows" | Toast text matches, modal stays open, password field remains `readonly`, table row unchanged |
+| **Negative** | "Modal closes on Cancel" | Modal removed from DOM, no API call fired, table retains original row state |
+| **Audit** | "Reset is logged" | Audit Log adds row: correct actor, action `Reset Password`, valid timestamp |
 
-Treat a one-bullet expected result as shallow unless the TC verifies a single static state.
+## Non-Assertable Handling
 
-## Shallow against deep
-
-| TC kind | Shallow, as written | Deep, strengthened |
-|---------|---------------------|--------------------|
-| Menu / list | "Reset Password option is present" | Action menu contains **exactly 3** items in order: View → Reset Password → Delete |
-| Validation | "Error message appears" | Error text matches exactly **and** no `PUT /admin-users/{id}/password` call fires |
-| Success | "Success toast shows" | Toast text matches, Edit modal stays open, password field still `readonly`, table row unchanged |
-| Negative | "Modal closes on Cancel" | Modal removed from DOM, no API call, table still shows the original row |
-| Audit | "Reset is logged" | Audit Log has a new row: correct actor, action `Reset Password`, timestamp within the run window |
-
-## Where an assertion will not hold
-
-- Send a TC back to classification when its assertion cannot be tied to an observable its surface produces.
-- Never weaken an expected result to make it assertable.
+- If an assertion cannot be tied to a pack observable, send the TC back to Phase 2 classification (Skipped or dropped platform).
+- **NEVER** weaken an expected result to make it assertable.

@@ -1,4 +1,7 @@
-# Dev Team (Bug Assignment) — OTC (AQXPAY-OTC)
+# Dev Team (Bug Assignment)
+
+Assignees for the project `.kiro/steering/jira.md` § Rovo MCP names. Replacing this table is how a new
+project is onboarded — no skill is edited.
 
 | Name | Role | Account ID |
 |------|------|------------|

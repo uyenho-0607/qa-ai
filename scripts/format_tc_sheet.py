@@ -138,10 +138,27 @@ def parse_tcs(md_path: Path) -> list[dict]:
         if test_data.strip().lower() == "(empty)":
             test_data = ""
 
+        name_value = field("Name")
+        # Module = the first "[Module] – [Sub-module] – ..." segment of the Name field
+        # (tc-conventions.md § Name Test Cases). Split on the en/em dash separator —
+        # never hardcode a single module for every TC in the file.
+        module = re.split(r"[–—]", name_value)[0].strip() if name_value else ""
+
+        # Login Method has its own optional block field (TEMPLATE.md: written inline
+        # only when the TC spans multiple platforms). Track whether it was present at
+        # all, not just whether it's non-empty, so patch mode (below) can tell an
+        # explicit override apart from "this TC doesn't state one".
+        login_method_m = re.search(r"\*\*Login Method:\*\*[ \t]*(.+)", block)
+        login_method = login_method_m.group(1).strip() if login_method_m else ""
+
+        # Configuration: a per-TC override in the block (TEMPLATE.md note) wins over
+        # the file header's default — falls back to the header when the block has none.
+        tc_configuration = field("Configuration") or configuration
+
         tcs.append({
             "id": tc_id_m.group(1),
-            "module": "Sign Up",
-            "name": field("Name"),
+            "module": module,
+            "name": name_value,
             "scenario": field("Test Scenario"),
             "type": field("Test Case Type"),
             "prereqs": field("Pre-requisites"),
@@ -151,8 +168,9 @@ def parse_tcs(md_path: Path) -> list[dict]:
             "er_fallback": er_fallback,
             "priority": field("Priority"),
             "req_ref": field("Requirement Reference"),
-            "login_method": "",
-            "configuration": configuration,
+            "login_method": login_method,
+            "login_method_explicit": login_method_m is not None,
+            "configuration": tc_configuration,
             "story": story,
             "automation": "",
         })
@@ -817,6 +835,7 @@ def patch_rows_in_place(
     spreadsheet_id: str,
     tab: str,
     sheet_id: int,
+    tcs: list[dict],              # parsed TC dicts — needed to know what was explicit
     new_rows: list[list[str]],   # full set from parse (includes header at [0])
     new_tc_row_ranges: list,     # (start, end, priority) 0-based in new_rows
     patch_id_set: set[str],
@@ -830,7 +849,17 @@ def patch_rows_in_place(
     3. If new step-count == old step-count: update values in-place (no row insert/delete).
        If counts differ: delete old rows, insert the correct number of blank rows, then write.
     4. Re-apply formatting to the affected rows only.
+
+    Module and Automation have no dedicated block field in manual-tcs.md — "module" is
+    always *derived* from the Name field, never an explicit per-TC value, and Automation
+    is never parsed at all. A patch therefore never has real data for those two columns,
+    so it must never overwrite them: doing so would blank/misclassify a value a reviewer
+    set directly in the live sheet. Login Method does have an explicit block field, so a
+    patch may overwrite it only when that field was actually present in the source block.
+    Live values for all three are restored onto the patched row below.
     """
+    tcs_by_id = {t["id"]: t for t in tcs}
+
     # Read current sheet state
     print("   Reading current sheet state ...")
     sheet_rows = read_sheet_rows(service, spreadsheet_id, tab)
@@ -863,6 +892,16 @@ def patch_rows_in_place(
 
         old_start, old_end = existing_ranges[tc_id]
         old_step_count = old_end - old_start
+
+        # Snapshot the live values for the columns a patch must not clobber, before
+        # any structural change below can shift or blank the row.
+        live_first_row = sheet_rows[old_start] if old_start < len(sheet_rows) else []
+        def live_val(col_name: str) -> str:
+            idx = COL_IDX[col_name]
+            return live_first_row[idx] if idx < len(live_first_row) else ""
+        live_module = live_val("Module")
+        live_login_method = live_val("Login Method")
+        live_automation = live_val("Automation")
 
         print(f"   Patching {tc_id}: sheet rows {old_start+1}–{old_end} "
               f"({old_step_count} step rows) → {new_step_count} step rows")
@@ -905,6 +944,17 @@ def patch_rows_in_place(
             sheet_rows = read_sheet_rows(service, spreadsheet_id, tab)
             existing_ranges = find_tc_row_ranges_in_sheet(sheet_rows)
             old_start, old_end = existing_ranges.get(tc_id, (old_start, old_start + new_step_count))
+
+        # --- Restore Module/Login Method/Automation onto the first row unless the
+        #     patch source explicitly specifies them (see docstring above) ---
+        tc_obj = tcs_by_id.get(tc_id, {})
+        if new_tc_rows:
+            first_row = list(new_tc_rows[0])
+            first_row[COL_IDX["Module"]] = live_module
+            if not tc_obj.get("login_method_explicit"):
+                first_row[COL_IDX["Login Method"]] = live_login_method
+            first_row[COL_IDX["Automation"]] = live_automation
+            new_tc_rows = [first_row] + [list(r) for r in new_tc_rows[1:]]
 
         # --- Write new values into the (now-correct-size) row range ---
         write_values(service, spreadsheet_id, tab, old_start, new_tc_rows)
@@ -1263,7 +1313,7 @@ def main():
     if args.patch_ids:
         patch_id_set = {pid.strip() for pid in args.patch_ids.split(",") if pid.strip()}
         print(f"\n🩹 Patch mode — targeting {len(patch_id_set)} TC(s): {', '.join(sorted(patch_id_set))}")
-        patch_rows_in_place(service, args.sheet, args.tab, sheet_id, rows, tc_row_ranges, patch_id_set)
+        patch_rows_in_place(service, args.sheet, args.tab, sheet_id, tcs, rows, tc_row_ranges, patch_id_set)
         print(f"\n✅ Patch done → https://docs.google.com/spreadsheets/d/{args.sheet}")
         return
 

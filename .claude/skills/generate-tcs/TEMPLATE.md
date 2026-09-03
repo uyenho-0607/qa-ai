@@ -25,7 +25,7 @@
 ## Notes
 
 - `**Name:**` — Module, Sub-module, and Feature are copied verbatim from `.claude/domain/tc-naming-ref.md`. Omit Sub-module when the Module has none.
-- File header (`Story`, `Configuration`) written once — never repeat in TC blocks.
+- File header (`Story`, `Configuration`) written once — never repeat in TC blocks, except a per-TC `**Configuration:**` override when that TC spans multiple platforms.
 - `**Test Data:**` — omit the field entirely when the TC needs none.
 - `**Expected Result:**` — every bullet prefixed `[N]` where N is the step number it follows. Steps with no checkpoint get no bullet.
 - `**Login Method:**` — write inline only when the TC spans multiple platforms.

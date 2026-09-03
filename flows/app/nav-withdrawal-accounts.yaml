@@ -1,0 +1,13 @@
+# Flow: Navigate to Withdrawal accounts hub from Home
+# Env: PASSCODE (default 111111)
+appId: com.bfgto.sit.app
+env:
+  PASSCODE: "111111"
+---
+- runFlow:
+    file: subflows/unlock.yaml
+- tapOn: "Account"
+- waitForAnimationToEnd
+- tapOn: "Withdrawal accounts"
+- waitForAnimationToEnd
+- assertVisible: "Withdrawal accounts"

@@ -1,6 +1,6 @@
 ---
 name: grill-tcs
-description: Grill a TC coverage plan before any test case is written — expected-result sources, missing negatives, weak oracles. Use when `generate-tcs` Phase 2 has written `tasks/{KEY}/tc-plan.md`, or when asked to grill or stress-test a plan.
+description: Grill a TC coverage plan before any test case is written — expected-result sources, missing negatives, weak oracles. Use for plan grading via `tc-grader`, or when asked to grill or stress-test a plan.
 ---
 
 # Grill TCs
@@ -9,25 +9,23 @@ Stress-test the coverage plan before a single case is written. Done when every `
 
 ## Contract
 
-- **Args:** `{KEY}` [, `no-gate`]
-- **Reads and updates:** `tasks/{KEY}/tc-plan.md`
+- **Args:** `{KEY}` [, `no-gate`] [, `platform` — id from `project-config.md` § Platforms; required for a standalone/gated run that dispatches `recon-scout`]
+- **Reads and updates:** `tasks/{KEY}/gen/tc-plan.md`; a `recon-scout` dispatch writes screenshots to `tasks/{KEY}/gen/recon/`
 - **Returns:** every `new` row at READY, or the row moved to Status `needs-clarification`
-- **With `no-gate`:** resolve, update the plan, and hand the resolved table back without stopping — the caller owns the gate
+- **With `no-gate`:** resolve every row, return the resolved table, write no file.
 
-## When to Run
+## Scope
 
-**Mandatory** — invoked by `generate-tcs` Phase 2 (unconditional: the plan is grilled whether or not existing TCs were collected in 1.6), or the input is a Jira ticket only.
-**Optional** — the user asks, or the feature is complex or ambiguous.
 **Skip** — invoked standalone on a set of existing TCs where the job is to structure them, not invent coverage. Grade those with `review-tcs` instead.
 
-Rows already marked `covered by [existing TC]` are exempt from the three questions — they carry an existing TC's assertions, not new ones. Grill every other row.
+Grill every `new` row. `covered by`, `gap`, and `needs-clarification` rows are exempt.
 
 ## The Three Questions
 
 Every `new` row answers all three. A gap in any answer blocks that row from reaching TC writing.
 
 **Q1 — Expected Result: where is the source?**
-State the exact expected value and the plan's Expected-value source for it: AC id, error-message id, UI observation, domain file, or API field.
+State the exact expected value and the row's Expected-value source per the plan's column rule.
 "The modal title is 'Reset Password'" traces to a Jira AC or a live UI snapshot, never to inference.
 
 **Q2 — Negative: what is the failure path?**
@@ -37,11 +35,12 @@ An unjustified missing negative is a gap.
 **Q3 — Oracle: could this TC pass on a bug?**
 If the app returns a wrong value that superficially matches the check, would the TC still pass?
 If yes → the assertion is too weak. Tighten the expected value or add a discriminating check.
+Resolve a gap by strengthening the check or clarifying the requirement.
 
 ## Flow
 
 ### 1. Load Plan
-Read `tasks/{KEY}/tc-plan.md`. List every `new` row by screen.
+Read `tasks/{KEY}/gen/tc-plan.md`. List every `new` row by screen.
 
 ### 2. Grill Each Row
 Per row, answer Q1, Q2, Q3 in a table:
@@ -55,19 +54,17 @@ Status is **READY** (all three answered, no gap) or **BLOCKED** (gap found, reas
 ### 3. Resolve Gaps → GATE *(skip the gate with `no-gate`, or when invoked by another skill)*
 
 Per BLOCKED row:
-- Missing expected-value source → open the live UI or re-read the Jira AC. Resolve it, or move the row to Status `needs-clarification`.
+- Missing expected-value source, standalone or gated invocation → dispatch the `recon-scout` agent with `{KEY}`, the platform id (see Contract), an instruction to write screenshots to `tasks/{KEY}/gen/recon/`, and the plan row's expected-value question as the fact to verify; re-read the Jira AC too. Resolve it, or move the row to Status `needs-clarification`.
+- Missing expected-value source, under `no-gate` (e.g. dispatched by `tc-grader`, which holds no Agent tool and no live-UI access) → report it as an `ask` and mark the row `needs-clarification`. Do not attempt recon.
 - Missing negative → add the negative row to the plan, or justify its absence.
 - Weak oracle → propose a tighter assertion.
 
 Present the resolved table. **Wait for user approval before proceeding.**
 
 ### 4. Update Plan
-Apply approved resolutions to `tasks/{KEY}/tc-plan.md` — new rows added, sources filled, statuses set.
+Apply approved resolutions to `tasks/{KEY}/gen/tc-plan.md` — new rows added, sources filled, statuses set.
 Confirm: "Plan updated. [n] rows READY, [n] needs-clarification. Proceeding to TC writing."
 
-## Hard Rules
-- Every row reaches READY or `needs-clarification` before TC writing starts.
-- A source of "inferred from context" is not a valid Q1 answer.
-- Skipping a negative requires an explicit justification, not silence.
-- Resolve a gap by strengthening the check or clarifying the requirement — never by weakening the check.
-- A row that cannot reach READY after one resolution attempt → escalate to the user, invent no answer.
+Under `no-gate` this step is the caller's. Return the resolved table with each row's new status, source, and any row you added, and let the caller write it.
+
+A row still short of READY after one resolution attempt → Status `needs-clarification` with the open question. Invent no answer.

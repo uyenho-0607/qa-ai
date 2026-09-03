@@ -9,18 +9,16 @@ The feedback lives on the QA Preparation sub-task; the cases live in Testmo. Car
 
 **Done when:** every actionable comment is classified, and every approved change is applied in Testmo.
 
-Jira is read-only here. Nothing is posted back to the ticket.
-
 ## Contract
 
 | | |
 |---|---|
 | **Args** | `{KEY}` (the parent ticket) [, `no-gate`] |
-| **Invokes** | `collect-testmo-cases` with `{KEY}`, `no-gate` |
-| **Steering** | `tc-feedback-actions.md`, `tc-design-guide.md`, `jira.md`, `testmo.md` |
+| **Ids** | `PROJECT_ID = 8` (OTC) — per `.kiro/steering/testmo.md` § Testmo Projects |
+| **Steering** | `tc-feedback-actions.md`, `tc-design-guide.md` |
 | **Jira** | `searchJiraIssuesUsingJql`, `getJiraIssue` — read only |
 | **Testmo** | `testmo_update_cases`, `testmo_create_cases`, `testmo_delete_cases` |
-| **Writes** | Testmo cases only. No Jira write, no repo file |
+| **Writes** | Testmo cases · `tasks/{KEY}/base/tc.md` via the Phase 3 collector. No Jira write |
 
 **Testmo write limits** — the phases below are shaped by these:
 
@@ -50,7 +48,7 @@ Match on issue type, never on summary text — a QA Preparation sub-task's summa
 
 `getJiraIssue` on that sub-task with `fields: ["comment"]`.
 
-Take every comment asking for a change to a test case. Number them, quoting the phrase each is drawn from so the source stays traceable:
+Take every comment asking for a change to a test case. Number them, quoting the phrase each is drawn from:
 
 ```
 #1 — [what to change]   ("[quoted phrase]" — [author], [date])
@@ -64,9 +62,9 @@ No actionable comments → report that and stop.
 
 ## Phase 3 — Load current cases
 
-Invoke `collect-testmo-cases` with `{KEY}`, `no-gate`. Its Phase 1 output carries case id, name, and folder; Phase 2 carries steps and expected results, which `update` rows read before rewriting.
+Dispatch the `testmo-collector` agent for `{KEY}`, then read `tasks/{KEY}/base/tc.md`. No Agent tool in context → disclose_context("collect-testmo-cases") FULLY with `{KEY}`, `save`, `no-gate`. The `update` rows read steps and expected results from that file before rewriting.
 
-Zero cases returned → stop and report. Feedback with nothing to apply it to is a finding, not a run.
+Zero cases returned → stop and report.
 
 **Done when:** every linked case is held with its id.
 
@@ -85,9 +83,9 @@ Feedback — {KEY} / {SUBTASK-KEY}    [n] items · delete [n] · update [n] · a
 | 4 | "..." | — | defer | AO-XXX handles this |
 ```
 
-An item matching no existing case is `add (new)`, called out as a coverage gap rather than folded in quietly.
+An item matching no existing case is `add (new)`, called out as a coverage gap.
 
-**GATE — stop until the user approves, adjusts, or drops individual rows.** *(skip with `no-gate`)*
+**GATE — stop until the user approves, adjusts, or drops individual rows.** *(skip with `no-gate`)* With `no-gate`, every `delete` row is a deprecation — a hard delete always needs the gate.
 
 A row proposing a hard delete rather than a deprecation is confirmed on its own, by case id, at this gate.
 
@@ -95,12 +93,12 @@ A row proposing a hard delete rather than a deprecation is confirmed on its own,
 
 In order:
 
-1. **add** — `testmo_create_cases`. Field mapping, issue link, configs, and state follow `to-testmo`.
+1. **add** — `testmo_create_cases`, fields per `to-testmo` § Field Mapping. The case content is the Phase 4 row — there is no `manual-tcs.md` in this flow.
 2. **delete** — one `testmo_update_cases` call setting `state_id: 5` across every approved id. Separately confirmed hard deletes run `testmo_delete_cases` afterwards.
 3. **update** — one `testmo_update_cases` call per case. A name change goes in `name`; a step or ER change rewrites the whole `customFields.custom_steps` array from the Phase 3 copy.
 4. **defer / ask** — no Testmo write.
 
-A failed call leaves its row unapplied and the run carries on. Report the failure in Phase 6; swallowing it silently would report a change that never landed.
+A failed call leaves its row unapplied and the run carries on; report it in Phase 6.
 
 **Done when:** every approved row is applied or recorded as failed.
 
@@ -115,6 +113,6 @@ Applied — {KEY}    [n] updated · [n] deprecated · [n] added · [n] deferred 
 |---|---|---|---|
 ```
 
-List every deferred and `ask` row beneath it with its reason. An open question stays the reviewer's to close, and it is raised with them by hand.
+List every deferred and `ask` row beneath it with its reason.
 
 **Done when:** every Phase 4 row appears in the report with its outcome, failures included.

@@ -1,43 +1,48 @@
 ---
 name: writing-conventions
-description: Write or audit a convention file for this project. Use when asked to write a new convention, update an existing one, or convert a raw document into convention format.
+description: Write or audit a convention file for this project. Use when asked to write a new convention or update an existing one.
 ---
 
 # Writing Conventions
 
-Convention file = single source of truth for one concern. Prescriptive, minimal, maintainable.
+Convention file = single source of truth for one concern.
 
 **A convention is applied, not studied. Write constraints and decision rules the agent follows — never material that teaches it the subject.**
+
+## Contract
+
+- **Args:** convention name or file [, `audit` [, `report-only`]]
+- **Writes:** `.kiro/steering/<name>.md`; the load step of each skill that needs it; `.kiro/` via `sync-kiro.py`
+- **Gate:** propose the file and the skill edits, wait for approval, then write.
 
 ## Branch: Write
 
 ### 1. Understand the concern
 - What single concern does this govern?
 - Who is audience — test author, POM author, both?
-- Which steering file overlaps? Read it.
 
 ### 2. Check overlap
-Search `.kiro/steering/`. Note existing rules, exclude from new file.
-
-### 3. Draft using TEMPLATE.md
-Rules:
-- Open every rule with a verb — imperative, not descriptive
-- Every rule is single, actionable sentence
-- State the constraint; never state why it exists
-- No explanations/rationale inline — rules only
-- Cut aphorisms and consequence sentences — they are rationale in disguise
-- Name each heading for the action it governs, not the topic
-- Include an example only to disambiguate a judgment call the rule cannot express
-- Positive framing (state what to do)
-- No weasel words: "must", not "should"
-- One rule per bullet, ≤20 words
-- Strip no-op rules (agent already does by default)
-
-### 4. Validate against steering
 ```bash
 ls .kiro/steering/
 ```
-Read every file whose concern touches the new one. Zero contradictions — the existing file wins.
+Read every file whose concern touches the new one. Note existing rules; exclude them from the new file.
+
+### 3. Draft using TEMPLATE.md
+```bash
+cat .kiro/skills/writing-conventions/TEMPLATE.md
+```
+Rules:
+- Open every rule with a verb — imperative, not descriptive
+- One rule per bullet, one obligation, ≤20 words
+- State the constraint; never why it exists — no rationale, aphorisms, or consequence sentences
+- Name each heading for the action it governs, not the topic
+- Include an example only to disambiguate a judgment call the rule cannot express
+- Positive framing (state what to do)
+- Write every obligation as "must"
+- Strip no-op rules (agent already does by default)
+
+### 4. Validate against steering
+Compare the draft to the rules noted in step 2. Zero contradictions — the existing file wins.
 
 ### 5. Save and wire up
 Save to `.kiro/steering/<kebab-case-name>.md`. Write no frontmatter — `sync-kiro.py` injects Kiro's `inclusion:` on the way out.
@@ -49,26 +54,13 @@ python3 sync-kiro.py
 
 ## Branch: Audit
 
-### 1. Note deviations
-- Missing/wrong-order section
-- Rule is explanation, not prescription
-- Descriptive bullet that reads as a statement, not a command
-- Aphorism or consequence sentence carrying rationale
-- Example that demonstrates the subject instead of disambiguating a rule
-- Heading naming a topic instead of an action
-- Weasel words, no-ops, duplicates
-- Two obligations per bullet
-- Negative framing that can be positive
-
-### 2. Fix in-place
-Same rules as Write. Don't change meaning — only form.
+1. Read every rule in *Draft* above; note each one the file fails. New files only: also flag missing or wrong-order sections against TEMPLATE.md.
+2. Report each failure as `{file}:{line} — rule violated → fix`.
+3. Apply the fixes only when the caller did not pass `report-only`.
 
 ## Hard Rules
-- Never include teaching material — no tutorials, walkthroughs, or worked examples
 - `## Purpose` ≤ 2 sentences
-- No `## Validation` section — rules are the only enforcement.
-- Never add `## Background` or `## Why`
-- File name = kebab-case matching title
-- Section headers match TEMPLATE.md exactly
+- No `## Validation` section
+- New files only: section headers match TEMPLATE.md
 
-`TEMPLATE.md` governs new files. The existing `.kiro/steering/` files predate it and use their own shapes — audit one for rule form, never to reshape it into the template.
+`TEMPLATE.md` governs new files.

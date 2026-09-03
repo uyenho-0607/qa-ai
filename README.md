@@ -30,8 +30,8 @@ Start here. Everything else is invoked by one of these.
 | Skill | Invoke with | What it does | Writes |
 |---|---|---|---|
 | `generate-tcs` | "generate TCs for AO-306" | Scope ACs/BRs/error messages → coverage plan → grill → write TCs → review → export (CSV / Google Sheet / Testmo) | `tc-plan.md`, `manual-tcs.md`, export target |
-| `report-bug` | "/bug", "report this bug" | Classify FE/BE, capture evidence, create a SIT Bug subtask under the parent | Jira subtask + `evidence/{KEY}/` |
-| `verify-bug` | "/verify-bugs-batch", "verify this fix" | Reproduce the STR, capture evidence, post the verification comment, transition the ticket | Jira comment + transition |
+| `report-bug` | "/bug", "report this bug" | Classify FE/BE, capture evidence, create a SIT Bug subtask under the parent | Jira subtask + `tasks/{KEY}/exec/evidence/` |
+| `verify-bug` | "/verify-bug", "verify this fix" | Reproduce the STR, capture evidence, post the verification comment, transition the ticket | Jira comment + transition |
 | `ui-discovery` | "explore this page", "map this feature" | Drive the live app and map workflows, values, validation, permissions, state transitions | Checkpoint Map + `.claude/domain/` flow file |
 | `git-workflow` | "/branch", "/push", "/rebase", "/pr" | Branch → stage/push → rebase → GitHub PR for QA task files | branch, commits, PR |
 | `audit-skills` | "/audit-skills <file>" | Token cost, cross-file duplication, and contract bugs in a skill or steering file | audit report |
@@ -49,7 +49,7 @@ Called by an entry point, or directly when you want just one stage.
 | Skill | Purpose |
 |---|---|
 | `jira-retriever` | Full ticket content — description, ACs, sub-tasks, comments, linked issues, images, Figma links → `jira.md` |
-| `figma-retriever` | Frozen design snapshot + PNG screenshots → `attachments/figma-snapshot.md` |
+| `figma-retriever` | Frozen design snapshot + PNG screenshots → `figma/figma-snapshot.md` |
 | `collect-testmo-cases` | Existing Testmo cases linked to `{KEY}` → `tc.md` |
 | `collect-gsheet-cases` | Existing cases from a Google Sheet tab → `tc.md` |
 
@@ -98,15 +98,13 @@ loads it — that is the point.
 |---|---|
 | `project-config.md` | Env vars, folder structure, tool ids. **Fill this in first** |
 | `tc-conventions.md` | TC format — naming, step wording, expected-result wording, traceability fields |
-| `tc-design-guide.md` | Structural decisions — merge/split, step scope, pre-req anchoring, module assignment |
+| `tc-design-guide.md` | Structural decisions — merge/split, step scope, pre-req anchoring, module assignment, shared-flow reuse |
 | `tc-scenario-guide.md` | What to test — coverage minimums per AC pattern, cross-cuts, sweep/match rules |
 | `tc-priority-guide.md` | Priority scoring factors and the decision table |
 | `qa-anti-patterns.md` | Smell → fix-owner index for TC and run reviews |
-| `bug-conventions.md` | Bug title format, STR, severity, required fields |
 | `jira.md` | Jira constants — site, `cloudId`, project/issue-type ids, transitions, bug assignment |
 | `testmo.md` | Testmo project ids, folders, configurations |
 | `playwright-rule.md` | Browser interaction rules. `browser_run_code_unsafe` only — the granular MCP tools are unreliable on SPAs |
-| `reasoning-standards.md` | Label every claim fact / assumption / recommendation / unknown |
 
 Two more reference stores, loaded on demand:
 

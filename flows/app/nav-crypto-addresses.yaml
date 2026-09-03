@@ -1,0 +1,15 @@
+# Flow: Navigate from Home to Crypto addresses screen
+# Env: PASSCODE (default 111111)
+appId: com.bfgto.sit.app
+env:
+  PASSCODE: "111111"
+---
+- runFlow:
+    file: subflows/unlock.yaml
+- tapOn: "Account"
+- waitForAnimationToEnd
+- tapOn: "Withdrawal accounts"
+- waitForAnimationToEnd
+- tapOn: "Crypto addresses"
+- waitForAnimationToEnd
+- assertVisible: "Crypto addresses"

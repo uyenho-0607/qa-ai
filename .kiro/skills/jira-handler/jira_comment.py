@@ -4,22 +4,22 @@ Atomic: uploads file(s) + resolves UUID(s) + posts ONE ADF comment — all in on
 
 Usage:
     # Single file + comment
-    .venv/bin/python ~/.kiro/skills/jira-handler/jira_comment.py --issue OMS-807 \
+    .venv/bin/python3 .kiro/skills/jira-handler/jira_comment.py --issue OMS-807 \
         --file ./video.mp4 --filename name.mp4 \
         --comment $'✅ Verified FIXED — SIT\n\n**Result:**\n- bullet 1'
 
     # Multiple files + comment (ONE comment, all media inline)
-    .venv/bin/python ~/.kiro/skills/jira-handler/jira_comment.py --issue OMS-807 \
+    .venv/bin/python3 .kiro/skills/jira-handler/jira_comment.py --issue OMS-807 \
         --file ./screenshot.png --filename neg.png \
         --file ./video.mp4 --filename pos.mp4 \
         --comment $'✅ Verified FIXED — SIT\n\n**Result:**\n- negative case OK\n- positive case OK'
 
     # Comment only (no attachment)
-    .venv/bin/python ~/.kiro/skills/jira-handler/jira_comment.py --issue OMS-807 \
+    .venv/bin/python3 .kiro/skills/jira-handler/jira_comment.py --issue OMS-807 \
         --comment $'✅ Verified FIXED — SIT\n\n**Result:**\n- details'
 
     # Delete a comment
-    .venv/bin/python ~/.kiro/skills/jira-handler/jira_comment.py --issue OMS-807 --delete 240061
+    .venv/bin/python3 .kiro/skills/jira-handler/jira_comment.py --issue OMS-807 --delete 240061
 """
 
 import argparse
@@ -35,7 +35,7 @@ from jira_common import (
     get_media_uuid,
     get_ssl_context,
     markdown_to_adf_content,
-    SERVER,
+    server,
 )
 
 
@@ -54,7 +54,7 @@ def post_adf_comment(issue_key: str, comment_text: str, media_items: list = None
             content_nodes.append(
                 {
                     "type": "mediaSingle",
-                    "attrs": {"layout": "wide", "width": 100},
+                    "attrs": {"layout": "full-width"},
                     "content": [
                         {
                             "type": "media",
@@ -72,7 +72,7 @@ def post_adf_comment(issue_key: str, comment_text: str, media_items: list = None
             )
 
     adf_body = {"version": 1, "type": "doc", "content": content_nodes}
-    url = f"{SERVER}/rest/api/3/issue/{issue_key}/comment"
+    url = f"{server()}/rest/api/3/issue/{issue_key}/comment"
     payload = json.dumps({"body": adf_body}).encode()
     req = urllib.request.Request(
         url,

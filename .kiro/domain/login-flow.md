@@ -40,8 +40,7 @@ Tags: `#device` `#setup` `#creds` `#otp` `#launch` `#gotcha` `#scope`
 #device  Install | `app-release.apk` at repo root | a fresh/wiped AVD has no app installed
 #setup   Env gate | `aq@aq.com` | one-time per INSTALL | fresh install only | reset: `adb shell pm clear com.bfgto.sit.app`
 #setup   App passcode | `111111` | one-time per DEVICE | first login on that device | entered twice (Create → Confirm)
-#creds   Mobile app account (works on office network) | `mth2608@mailinator.com` / `SHARED_PASSWORD`
-#creds   `MEMBER_APP_BUSINESS` | `mth2107@yopmail.com` | UNUSABLE here — yopmail blocked on office network
+#creds   Mobile app account (works on office network) | `MEMBER_APP_BUSINESS` / `SHARED_PASSWORD`
 #otp     Login OTP | 6 digits | sender `aqxotc-sit@s20ip12.com` | subject "BFG OTC Verification Code" | valid 5 min | resend after 60s
 #otp     Fetch | `.venv/bin/python scripts/mailinator_otp.py otp mth2608 --after now --sender aqxotc-sit`
 #launch  Android | `adb shell am start -n com.bfgto.sit.app/com.bfgtoapp.MainActivity` | `monkey` does NOT work (exits -5)
@@ -56,9 +55,8 @@ Tags: `#device` `#setup` `#creds` `#otp` `#launch` `#gotcha` `#scope`
 
 Cold machine to a running app. This precedes everything below.
 
-`mobile_list_available_devices` lists devices **already** connected — it does not boot an AVD.
-Booting is a shell step, and it comes first. There is no `mobile_use_device`: every `mobile_*`
-call takes the `device` id explicitly.
+**The driver attaches to devices; it does not boot them.** Listing devices returns only what is *already*
+connected. Booting is a shell step, and it comes first.
 
 **Use `pixel6`.** Every coordinate in the cache was measured on it at 1080x2400.
 `pixel7pro` exists on this machine and voids all of them.
@@ -67,17 +65,18 @@ call takes the `device` id explicitly.
 # 1. boot — run this in the background; the emulator process never returns
 emulator -avd pixel6
 
-# 2. wait for it — `am start` or a mobile_* call against a booting device fails "device offline".
+# 2. wait for it — `am start` or any driver call against a booting device fails "device offline".
 #    The sleep runs inside the device shell, so it does not block the host.
 adb wait-for-device shell 'while [ -z "$(getprop sys.boot_completed)" ]; do sleep 1; done'
 ```
 
-Then, over the `mobile` server:
+Then, over the driver:
 
-1. `mobile_list_available_devices` — take the id (`emulator-5554` with one emulator up).
-2. `mobile_list_apps` — is `APP_PACKAGE` there? A fresh or wiped AVD does not have it.
-3. Absent → `mobile_install_app`, `path` = `app-release.apk` at the repo root (build 0.15.0).
-4. `mobile_launch_app`. Pass `locale` wherever a TC asserts on visible text.
+1. **List devices** — take the id (`emulator-5554` with one emulator up). Every call that acts on a device
+   needs it.
+2. **List installed apps** — is `APP_PACKAGE` there? A fresh or wiped AVD does not have it.
+3. Absent → **install** `app-release.apk` from the repo root (build 0.15.0).
+4. **Launch** it. Pass `locale` wherever a TC asserts on visible text.
 
 A **fresh install lands on the env gate**, not Welcome — the one-time setup steps below apply.
 Raw `adb` remains the fallback and is what the walkthrough below is written in; the launch
@@ -207,12 +206,11 @@ leading digit (2026-08-27) — clear with `keyevent 67` and send digit-by-digit.
 
 ## Test account used
 
-`MEMBER_APP_BUSINESS` in `project-config.md` is `mth2107@yopmail.com`, which is unreachable
-from the office network. The working account on this build:
+The working account on this build:
 
 | Field | Value |
 |---|---|
-| Email | `mth2608@mailinator.com` |
+| Email | `MEMBER_APP_BUSINESS` |
 | Password | `SHARED_PASSWORD` |
 | App passcode | `111111` — the standing default, set per device |
 | Display name | bun bo — "Personal account" |

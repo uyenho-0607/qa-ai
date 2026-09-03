@@ -20,27 +20,25 @@ inclusion: manual
    - Audit log or history → one scenario asserting the action is logged with correct actor, timestamp, and before/after values.
    - OTP or verification code → Navigation (OTP screen UI, back-navigation target); Boundary (resend countdown, max attempts, expiry); one scenario asserting resend invalidates the old code and delivers a new one.
    - Linked entity (address, account, saved item) → List, Table, or Search; Navigation / Screen Flow; Selection or Reference List.
+   - Composite uniqueness or a count limit → one scenario per allowed complement: same-A/different-B, different-A/same-B, and at limit−1 succeeding.
 
-**Unresolved rules.** When the ticket does not answer a question the rules above raise — reverse transition undocumented, scope of a rule unclear, back-navigation target unstated, a linked ticket's relevance unknown — write a `needs-clarification` row in `tc-plan.md` naming the question. Never guess the answer and never silently drop the scenario.
+**Unresolved rules.** When the ticket does not answer a question the rules above raise — reverse transition undocumented, scope of a rule unclear, back-navigation target unstated, a linked ticket's relevance unknown — write a `needs-clarification` row in the artifact this run writes, naming the question. Ask, and keep the scenario in the plan.
 
 ## Scenario Types
 
-Use these type names exactly: Happy Path · Validation · Boundary · Negative · Empty / No Data · Permission / Role · Status Transition · Cross-Platform · Multi-Account · Concurrent / Side Effect · Navigation / Screen Flow · Mobile App Lifecycle · Cross-System Sync.
+Use these type names exactly: Happy Path · Validation · Boundary · Negative · Empty / No Data · Permission / Role · Status Transition · Cross-Platform · Multi-Account · Concurrent / Side Effect · Navigation / Screen Flow · Mobile App Lifecycle · Cross-System Sync · Display / UI.
 
 - **Validation** — input rejected by a field-level rule (required, format, length, range). Assertion is the field error message.
 - **Negative** — action rejected by state, permission, or a business rule, not by field input. Assertion is the blocked outcome.
 - **Boundary** — the edge value itself: min, max, zero, negative, limit−1 / limit / limit+1.
-- **Cross-Platform** — same scenario on Desktop and Mobile.
-- **Multi-Account** — behaviour varies by account type, group, or config.
 - **Concurrent / Side Effect** — an effect outside the screen that triggered it: audit entry, balance change, linked record update, live refresh.
 - **Navigation / Screen Flow** — entry points, back navigation, screen transitions, data retention.
 - **Mobile App Lifecycle** — background, kill-app, network interruption — state recovery.
-- **Cross-System Sync** — change in one system immediately reflected in another.
 
 ## Granularity and Assertions
 
 - One TC per assertion group, not per label or per word. A screen's static labels, placeholders, and icons are one Display TC, not one each.
-- Fields sharing identical validation rules collapse into one TC naming all of them. Apply a scenario per field only where the rules differ.
+- Same-rule collapse: `tc-design-guide.md`.
 - Every Expected Result must assert the text of the AC/BR/ERR id the TC cites. If the id's wording and the assertion diverge, the citation is wrong or the scenario is.
 - 8+ TCs on a single AC means the AC was split too finely — consolidate before writing.
 
@@ -70,8 +68,7 @@ Signals: select · dropdown · choose · supported · configured · whitelist ·
 - Options list matches the documented/configured set
 - Each option displays correct label / icon (if specified)
 - Selecting an option updates dependent field(s) correctly (if other fields depend on the selection)
-- Search within modal — partial input filters results correctly (if modal has a search bar)
-- Search within modal — clearing input restores the full list (if modal has a search bar)
+- Field opens a modal with a search bar → apply § List, Table, or Search search rules
 
 ### List, Table, or Search
 Signals: list · table · search · filter · sort · column · pagination
@@ -132,7 +129,7 @@ Signals: label · placeholder · layout · responsive · icon · tooltip · titl
 - Empty / loading state handled
 
 ### Multi-Account or Configuration-Dependent
-Signals: account type · group · configuration · symbol config · user group · leverage
+Signals: account type · group · configuration · user group
 
 - Default / standard configuration
 - Non-default configuration (if differences documented)

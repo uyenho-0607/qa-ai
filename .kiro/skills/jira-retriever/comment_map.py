@@ -4,6 +4,7 @@ Reads Jira issue JSON from stdin (fields: attachment, comment).
 Prints one line per attachment: filename|source|author|date|excerpt
 Source is either "comment:<id>" or "ticket-description".
 """
+import re
 import sys
 import json
 from datetime import datetime
@@ -12,7 +13,7 @@ from datetime import datetime
 def parse_ts(s):
     if not s:
         return None
-    s = s.replace('+0800', '+08:00').replace('+0000', '+00:00')
+    s = re.sub(r'([+-]\d{2})(\d{2})$', r'\1:\2', s)
     try:
         return datetime.fromisoformat(s)
     except Exception:
@@ -54,7 +55,7 @@ for att in attachments:
         body_excerpt = str(body_raw)[:120].replace('\n', ' ')
         print(
             att['filename'] + '|'
-            + 'comment:' + best_comment['id'] + '|'
+            + 'source:comment:' + best_comment['id'] + '|'
             + 'by:' + best_comment['author']['displayName'] + '|'
             + 'date:' + best_comment['created'][:10] + '|'
             + 'excerpt:' + body_excerpt

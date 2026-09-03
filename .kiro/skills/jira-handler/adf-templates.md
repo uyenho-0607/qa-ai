@@ -19,7 +19,7 @@
         "type": "media",
         "attrs": {
           "type": "file",
-          "id": "{MEDIA_UUID}",
+          "id": "{MEDIA_1}",
           "alt": "filename.png",
           "collection": "",
           "width": 2560,
@@ -51,15 +51,6 @@
 
 ---
 
-## Bold Paragraph Node
-
-```json
-{
-  "type": "paragraph",
-  "content": [{"type": "text", "text": "Steps to Reproduce:", "marks": [{"type": "strong"}]}]
-}
-```
-
 ## Ordered List Node (STR steps)
 
 ```json
@@ -68,17 +59,6 @@
   "content": [
     {"type": "listItem", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Navigate to "}, {"type": "text", "text": "https://...", "marks": [{"type": "link", "attrs": {"href": "https://..."}}]}]}]},
     {"type": "listItem", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Click ..."}]}]}
-  ]
-}
-```
-
-## Bullet List Node (findings)
-
-```json
-{
-  "type": "bulletList",
-  "content": [
-    {"type": "listItem", "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Finding with "}, {"type": "text", "text": "/api/endpoint", "marks": [{"type": "code"}]}]}]}
   ]
 }
 ```

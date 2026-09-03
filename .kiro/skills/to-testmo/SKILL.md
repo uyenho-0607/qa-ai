@@ -5,18 +5,18 @@ description: Export manual-tcs.md test cases to Testmo — field mapping, issue 
 
 # To Testmo — Export Test Cases
 
-**Done when:** every TC in `tasks/{KEY}/manual-tcs.md` exists exactly once in Testmo under the confirmed folder, linked to `{KEY}`, configs set, and state Pending Review.
+**Done when:** every TC in `tasks/{KEY}/gen/manual-tcs.md` exists exactly once in Testmo under the confirmed folder, linked to `{KEY}`, configs set, and state Pending Review.
 
 ## Contract
 
-- **Args:** `{KEY}` [, Module folder name or `folder_id`]
-- **Reads:** `tasks/{KEY}/manual-tcs.md`; the id sections of `.kiro/steering/testmo.md`
+- **Args:** `{KEY}` [, Testmo folder URL, Module folder name, or `folder_id`]
+- **Reads:** `tasks/{KEY}/gen/manual-tcs.md`; the id sections of `.kiro/steering/testmo.md`
 - **Writes:** nothing
 
-Every id comes from `testmo.md`. Read only the id sections of `testmo.md`:
+Every id comes from `testmo.md`:
 
 ```bash
-awk '/^## /{p = /Testmo Projects|Configurations by Project|Case Field IDs|Jira Issue Connections/} p' .kiro/steering/testmo.md
+awk '/^## /{p = /Testmo Projects|Configurations by Project|Case Field IDs|Jira Issue Connections|Deep-Link URL Formats/} p' .kiro/steering/testmo.md
 ```
 
 A ticket prefix not found in `testmo.md` → confirm the project and connection once before creating anything.
@@ -33,9 +33,9 @@ Rich text uses `<br />`, never `\n`. Omit any field whose source value is empty.
 | Steps + ER | `customFields.custom_steps` | see below |
 | Test Data | `customFields.custom_test_data` | plain text |
 | Priority | `customFields.custom_priority` | id per `testmo.md` § Case Field IDs |
-| Login Method | `customFields.custom_prerequisite` | appended as a final `<br />` line — present only when the TC needs a specific login |
+| Pre-requisites + Login Method | `customFields.custom_prerequisite` | split Pre-requisites on `; `, strip trailing `;` from each item, prefix each with `- `, join with `<br />`; Login Method appended as the final line — present only when the template writes it inline (a TC spanning multiple platforms), wrapped `<p>…</p>` |
 
-Fixed on every case: `projectId`, `folder_id` (confirmed), `state_id`, `issues: [{ display_id: "{KEY}", integration_id: 1 }]`, `issueConnections`.
+Fixed on every case: `projectId`, `folder_id` (confirmed), `state_id`, `issues: [{ display_id: "{KEY}", integration_id: 1, connection_project_id: <from § Jira Issue Connections, matched by {KEY}'s prefix> }]`.
 
 `Test Case Type` is not exported — no Testmo field holds it.
 
@@ -49,22 +49,22 @@ Fixed on every case: `projectId`, `folder_id` (confirmed), `state_id`, `issues: 
 
 1. **Folder** — if a Testmo URL is given (e.g. `…/repositories/2?group_id=4686`), extract `project_id` from the path segment and `folder_id` from the `group_id` query param — no lookup needed. Otherwise: use a bare `folder_id` directly; a Module name → resolve with `testmo_list_folders`; neither → ask "Which Module folder?"
 
-2. **Parse** `tasks/{KEY}/manual-tcs.md` into the params above, one payload per TC.
+2. **Parse** `tasks/{KEY}/gen/manual-tcs.md` into the params above, one payload per TC.
 
-   **Configuration** comes from the file header per `generate-tcs/TEMPLATE.md`; a `**Configuration:**` line inside a TC block overrides it for that TC. Split on `;`. Every name must match `testmo.md` § Configurations by Project exactly.
+   **Configuration** comes from the file header line `**Configuration:** <names>`; a `**Configuration:**` line inside a TC block overrides it for that TC (the multi-platform exception noted in `generate-tcs/TEMPLATE.md`). Split on `;`. Every name must match `testmo.md` § Configurations by Project exactly.
 
 3. **Duplicate guard** — `testmo_find_cases_by_issue` for `{KEY}`. Cases already linked → present the overlap by Name and ask: create only the missing | create all anyway | abort. Skip only on an exact Name match.
 
 4. **Create** — `testmo_create_cases`, max 100 payloads per call.
 
-5. **Configs** — if config is skipped or absent, omit this step and note `configs skipped` in the report. Otherwise, per created case id, call `testmo_set_case_configs` with the ids for that TC's configuration names.
+5. **Configs** — no `**Configuration:**` line anywhere → omit this step and report `configs none`. Otherwise, per created case id, call `testmo_set_case_configs` with the ids for that TC's configuration names.
 
 6. **Report:**
 ```
 Testmo export — {KEY}
-  {n} cases in folder {folder_id} | configs {list or "skipped"} | state Pending Review
+  {n} cases in folder {folder_id} | configs {list or "none"} | state Pending Review
   {n} skipped as already linked
-  https://aquariux.testmo.net/repositories/{project_id}?group_id={folder_id}
+  {case deep-link, in the format read in the Contract's id lookup}
 ```
 Name every failed TC with its error.
 

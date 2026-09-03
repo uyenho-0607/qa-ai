@@ -1,6 +1,6 @@
 # UI Discovery Rules
 
-What must be discovered, and what the output must contain. Consulted during Phase 2 to verify completeness.
+What must be discovered, and what the output must contain. Loaded at Phase 0; used through Phase 4 to verify completeness and flow-file quality.
 
 ---
 
@@ -37,23 +37,10 @@ What must be discovered, and what the output must contain. Consulted during Phas
 
 ---
 
-## Completeness Checklist
+## Completeness
 
-Before marking a page as complete:
-
-- [ ] Business capability is identified
-- [ ] Complete user workflow is mapped
-- [ ] All business values are in the Checkpoint Map
-- [ ] All business actions are documented
-- [ ] All business states and transitions are identified
-- [ ] Conditional visibility rules are observed
-- [ ] All validation rules are recorded
-- [ ] All error behaviours are documented
-- [ ] Empty states are identified
-- [ ] Negative paths are documented per role and state
-- [ ] Cross-module relationships are mapped
-- [ ] Permission differences are documented
-- [ ] Screenshot exists for each distinct page state
+**A page is complete when** every bullet in *What to Discover* is answered for it, a screenshot exists
+per distinct page state, and cross-module relationships are mapped.
 
 ---
 

@@ -14,10 +14,10 @@ inclusion: manual
 | 6 | **Untraceable TC** | Story field empty; Requirement Reference empty | `tc-conventions.md` |
 | 7 | **Missing Precondition** | Steps assume account exists, feature is enabled, or user is in a specific state — not stated in Pre-requisites | `tc-conventions.md` |
 | 8 | **Non-Reproducible Steps** | Steps say "click the button", "go to the page", "enter a value" without naming the specific element; Test Data empty while a step needs a value | `tc-conventions.md` |
-| 9 | **Invented Module, Sub-module, or Feature** | Name segment does not appear verbatim in `tc-naming-ref.md`; or Module does not match an existing Testmo folder | `tc-conventions.md` |
+| 9 | **Invented Module, Sub-module, or Feature** | Name segment invented or misspelled — see `tc-conventions.md` | `tc-conventions.md` |
 | 10 | **Duplicate TC** | Same scenario exists under a different name or ID in the same module | `tc-conventions.md` |
 | 11 | **Priority Not Assigned or Inflated** | Priority field empty; or every TC in a set is High regardless of scenario type | `tc-priority-guide.md` |
-| 12 | **Blocking Bug Not Linked** | TC status is Failed or Blocked; no Jira bug ID linked in the result | `bug-conventions.md` |
+| 12 | **Blocking Bug Not Linked** | TC status is Failed or Blocked; no Jira bug ID linked in the result | `mark-testmo-run` skill |
 | 13 | **Orphaned Assertion** | Expected Result doesn't match the text of the AC/BR/ERR id it cites | `tc-scenario-guide.md` |
 | 14 | **Missing Reverse Transition** | A forward state transition (e.g. Enabled→Disabled) is tested; no TC and no `needs-clarification` entry addresses the reverse | `tc-scenario-guide.md` |
 | 15 | **Silent Scope Narrowing** | A rule stated broadly in the ticket (e.g. "unique per member") is tested against only one status/condition with no flag | `tc-scenario-guide.md` |

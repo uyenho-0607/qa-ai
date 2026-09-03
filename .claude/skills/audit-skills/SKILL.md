@@ -49,7 +49,7 @@ python3 .claude/skills/audit-skills/find-dupes.py <files in scope>
 | Read path | per run × times read | a step reading a whole artifact to extract two fields — replace with `grep` |
 | File content | per invocation | duplication, sprawl, form |
 
-A 500-token file read once loses to a 20-token line loaded every turn. Work down the tiers in order.
+Work down the tiers in order.
 
 **2.2 Check contracts.** Cross-skill bugs hide where one skill's declaration meets another's behaviour:
 
@@ -91,8 +91,11 @@ python3 sync-kiro.py --check    # mirror in step
 
 # every file path named in the audited docs still resolves
 python3 .claude/skills/audit-skills/check-refs.py <files in scope>
+
+# markdown structure — code spans split across a line break, unclosed fences, cramped headings
+python3 .claude/skills/audit-skills/check-format.py <files in scope>
 ```
 
-`check-refs.py` resolves a ref against the repo root and against the naming file's own directory. What it lists are candidates: a doc may name `AGENTS.md` or `CLAUDE.md` as a kind of document rather than a path.
+`check-refs.py` output lists candidates, not confirmed breaks: a doc may name `AGENTS.md` or `CLAUDE.md` as a kind of document rather than a path.
 
 Format consumed by a parser → run the parser on a real artifact before and after, and diff the output. Identical output is the only proof a format change was safe.

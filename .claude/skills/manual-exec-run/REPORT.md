@@ -1,141 +1,99 @@
-# The shape of `report.md`
+> Note: Sections marked `(Omit if...)` are omitted entirely when empty. Reference existing `exec.md` data rather than re-copying verbose context.
 
-Phase 3 writes `tasks/{KEY}/report.md` to the shape below, and Phase 4 completes it. Every section is
-required; a section with nothing in it reads *None* rather than being dropped.
+# SIT Report — {Feature} {Build}
 
-This file is what `report-bug` and the Testmo write-back read. Neither re-opens `exec.md`.
-
----
-
-# SIT Execution Report — {Feature} {Build}
-
-## Metadata
-
-- Ticket: {KEY}
-- Module: {carried from exec.md § Execution Context}
-- Environment: {SIT | UAT}
-- **Evidence mode:** {normal | screenshot}
-- Executed At: {earliest result timestamp} – {latest result timestamp}
-- Exec file: `tasks/{KEY}/exec.md`
-- Environment deviations: {carried from exec.md, or "none"}
-
-| Target | Device / URL | OS / viewport | Build |
-|---|---|---|---|
-| {target} | {identifier or URL} | {version or size} | {build \| unknown} |
-
-> Carried from `exec.md` § Preflight § Targets. `report-bug` names the device or URL and the build per
-> target in every bug it files, and takes both from here.
+- **Ticket** — {KEY}
+- **Executed** — {earliest timestamp} → {latest timestamp}
+- **Environment** — {SIT | UAT}
+- **Platforms** — {labels} *(Detail in `exec.md` § Preflight)*
+- **Plan** — `tasks/{KEY}/exec/exec.md`
 
 ---
 
 ## Summary
 
-> One row per target, plus an **All** row counting each TC once, at its worst status across targets.
-> Pass rate is `passed / (total − skipped)`.
+| Platform | Total | ✅ Passed | ❌ Failed | 🚫 Blocked | Skipped |
+|---|---|---|---|---|---|
+| {platform label} | | | | | |
+| **All** | | | | | |
 
-| Target | Total | Passed | Failed | Blocked | Skipped | Pass rate |
-|---|---|---|---|---|---|---|
-| {target} | {n} | {n} | {n} | {n} | {n} | {x}% |
-| **All** | {n} | {n} | {n} | {n} | {n} | {x}% |
-
----
-
-## Target Differences
-
-> Every behaviour that differed between targets. A difference is a finding, not a variant.
-> *None* — where every target behaved identically, and on a single-target run.
-
-| TC | Checkpoint | {target} observed | {target} observed | Defect? |
-|---|---|---|---|---|
-| {TC-ID} | c{N} | {what was seen} | {what was seen} | {yes — in Bugs Found \| no — {why}} |
+*Verified at recon: {n} TCs · Executed in waves: {n} TCs*
 
 ---
 
-## AC Coverage
+## Result by Test Case
 
-> Carried from `exec.md`. An AC whose only TC failed or blocked on any target reads `unverified`.
-
-| AC | Requirement | TCs | Result |
-|---|---|---|---|
-| AC-1 | {text} | {TC-IDs} | verified |
-| AC-2 | {text} | {TC-IDs} | unverified — {TC-ID} failed on {target} |
+| TC | Case ID | Title | Platform | Result | Bug |
+|---|---|---|---|---|---|
+| TC-{id} | {case id} | {title} | {label} | ✅ PASSED | — |
 
 ---
 
 ## Bugs Found
 
-> Candidate defects from this run. Not filed — raise them with `report-bug` after review. One row per
-> defect, naming every target it reproduced on; a defect seen on one target only is still one row.
+> Candidate defects for review. Raise via `report-bug`. Single place where bug keys are assigned.
 
-| TC | Targets | Description | Repro | Backend | Evidence | Bug |
+| TC | Platforms | What is wrong | Repro | Backend | Evidence | Bug |
 |---|---|---|---|---|---|---|
-| {TC-ID} | {targets it reproduced on} | {one-line description} | {2/2 \| 1/2} | {status and compared values \| not checked} | {filename} | {BUG-KEY once filed, or —} |
-
-*None* — if no failure looked like a product defect.
+| TC-{id} | {labels} | {defect description} | {2/2 \| 1/2} | {status & values \| not checked} | {file} | — |
 
 ---
 
-## TC Results
+## Rejected Candidates *(Omit if no candidates rejected)*
 
-> One status column per target, `N/A` where the TC's surface cannot reach it. Evidence is the name derived
-> from the plan — never a renamed copy. An Added Coverage TC carries `—` for its Case ID; the Testmo
-> write-back asks before creating a case for it.
-
-| TC | Case ID | Title | {target} | {target} | Bug | Evidence |
-|---|---|---|---|---|---|---|
-| TC-01 | {case id} | {title} | PASSED | PASSED | — | {filename} |
-| TC-02 | {case id} | {title} | FAILED | N/A | {BUG-KEY} | {filename} |
+| TC | Why it is not a defect |
+|---|---|
+| TC-{id} | {reason} |
 
 ---
 
-## Failed & Blocked Details
+## Failed & Blocked *(Omit if all passed)*
 
-> One entry per failed or blocked TC. This entry is what `report-bug` classifies from, so it carries every
-> signal the run produced and nothing is left in `exec.md`.
+### TC-{id} · {Title} — {❌ FAILED | 🚫 BLOCKED} on {platform labels}
 
-### {TC-ID} — {Title} — FAILED on {targets}
-
-**Checkpoint:** c{N} — {assertion text, verbatim}
-**Expected:** {expected result from exec.md}
-**Actual:** {target}: {what was observed} · {target}: {what was observed}
-**Repro:** {2/2 | 1/2 — intermittent}
-**Backend:** {status and compared field values | not checked}
-**Crash / console:** {crash ID and summary | console error | none}
-**Log:** {the lines naming the app under test | none}
-**Evidence:** `evidence/{KEY}/{filename}`
-**Bug:** {BUG-KEY | not filed | not a defect — {why}}
+- **Expected**: {verbatim expected result from plan}
+- **Observed**: {platform}: {observed state}
+- **Repro**: {2/2 | 1/2 — intermittent}
+- **Backend**: {status & compared field values | not checked}
+- **Signals**: {crash id | console errors | none}
+- **Evidence**: {file names}
+- **Reading**: {product defect | environment | data | plan error} — {reasoning}
 
 ---
 
-### {TC-ID} — {Title} — BLOCKED on {targets}
+## Platform Differences *(Write "None" for single-platform runs)*
 
-**Blocker:** {reason execution could not continue}
-**Evidence:** —
+| What | {platform A} | {platform B} | Reading |
+|---|---|---|---|
 
 ---
 
-## Skipped
+## Visual Findings *(Omit if no visual findings)*
 
-> Carried from `exec.md` § Skipped.
+| Platform | Screen | What is wrong | Evidence |
+|---|---|---|---|
+
+---
+
+## AC Coverage
+
+| AC | Requirement | TCs | Result |
+|---|---|---|---|
+| AC-{n} | {requirement description} | {TC ids} | {verified | unverified} |
+
+---
+
+## Not Executed *(Omit if none skipped/deferred)*
 
 | TC | Case ID | Title | Reason |
 |---|---|---|---|
-| {TC-ID} | {case id} | {title} | {reason} |
+| TC-{id} | {case id} | {title} | {reason} |
 
 ---
 
-## Rejected Candidates
+## Evidence Audit *(Omit if audit clean)*
 
-> Written by Phase 4. Bugs Found rows the user declined to file. *None* until one is declined.
-
-| TC | Description | Reason declined |
-|---|---|---|
-| {TC-ID} | {one-line description} | {why it was not filed} |
-
----
-
-## Notes
-
-{Observations that don't fit a specific TC — unexpected behaviour, environment issues, the crash IDs and log
-lines collected per wave, evidence files the run could not produce, unaddressable elements the app or FE team
-must fix, suggestions.}
+Missing: {TC id} — {expected capture that does not exist} · {the plan line that expects it}
+Anomalies: {file} — {size or duration out of standard, assertion not visible in frame, wrong section at destination, missing FAILED marker or Actual/Expected lines}
+Queue: {clean | {n} failed} · retries run: {files, or "none"}
+Verdict: {complete | incomplete — do not report evidence as captured}

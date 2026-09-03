@@ -1,0 +1,11 @@
+# Subflow: Navigate from Home to Linked bank accounts screen
+# Precondition: App is on Home screen (post-unlock)
+appId: com.bfgto.sit.app
+---
+- tapOn: "Account"
+# - waitForAnimationToEnd
+- tapOn: "Withdrawal accounts"
+# - waitForAnimationToEnd
+- tapOn: "Linked bank accounts"
+# - waitForAnimationToEnd
+- assertVisible: "Linked bank accounts"

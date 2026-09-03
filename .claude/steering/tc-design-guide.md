@@ -5,11 +5,12 @@ Format → `tc-conventions.md`. What to test → `tc-scenario-guide.md`.
 
 ## Merge or Split TCs
 
-- Merge scenarios sharing the same steps that differ only in assertion; one ER bullet per checkpoint.
+- Merge scenarios sharing the same steps that differ only in assertion.
 - Merge a scenario whose assertion a later scenario already passes through.
 - Merge a linear progression (type → clear → type again) into one TC with inline test-data variants.
 - Split when a distinct business rule drives the outcome.
 - Cover same-rule input variants in one TC carrying multiple test-data values.
+- Merge identical scenarios across configs into one TC, config-specific results stated in the ER (e.g. `Android app; iOS app`).
 
 ```
 ✔ Split: DOB under-18 (age rule) vs DOB in future (date-validity rule).
@@ -33,7 +34,7 @@ Format → `tc-conventions.md`. What to test → `tc-scenario-guide.md`.
 ## Anchor Pre-requisites
 
 - Anchor to the screen the tester occupies before step 1.
-- Verify flow order against the AC/BR table before writing the anchor.
+- Verify flow order against the AC/BR list in `tasks/{KEY}/base/jira.md` before writing the anchor.
 - State prior field values, selections, and completed steps in Pre-requisites.
 
 ```
@@ -43,7 +44,7 @@ Format → `tc-conventions.md`. What to test → `tc-scenario-guide.md`.
 
 ## Reuse Shared Flows
 
-- Reference existing TCs by id with status `covered by [source ticket]` when the ticket marks steps as reusing an existing flow.
+- Reference existing TCs by id with status `covered by [existing TC name]` when the ticket marks steps as reusing an existing flow — name the source ticket in the Refs column, not Status.
 - Import existing TCs as-is from the source when absent from the target sheet or Testmo.
 - Write shared-flow TCs generically — no account-type or path-specific language.
 - State both account-type variants in the ER for BO TCs citing account-specific fields.
@@ -56,6 +57,5 @@ Format → `tc-conventions.md`. What to test → `tc-scenario-guide.md`.
 
 ## Assign Modules
 
-- Assign a TC to the module of the screen it verifies.
+- Assign a TC to the module of the screen it verifies, not the ticket's feature area.
 - Assign BO-facing TCs to the BO module (e.g. `Members`), regardless of triggering flow.
-- Prefer the screen's natural module over the ticket's feature area.

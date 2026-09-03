@@ -1,0 +1,76 @@
+# Flow: Add a new crypto address
+# Usage: maestro test flows/app/add-crypto-address.yaml \
+#   -e LABEL="My Test Wallet" \
+#   -e WALLET_ADDRESS="0x1111111111111111111111111111111111111111" \
+#   -e NETWORK_NAME="Ethereum (ERC20)" \
+#   -e OTP="123456" \
+#   -e PASSCODE="111111"
+#
+# Verified end to end at AO-925 Wave 14 (smoke test, crypto id 12 created).
+# WALLET_ADDRESS must be 40 hex chars after "0x" — the app validates length
+# and rejects anything shorter with "Please enter a valid wallet address for
+# the selected network."; no checksum is enforced.
+# Precondition: App is running (may be on passcode or home screen)
+appId: com.bfgto.sit.app
+env:
+  PASSCODE: "111111"
+  LABEL: "My Test Wallet"
+  WALLET_ADDRESS: "0x1111111111111111111111111111111111111111"
+  NETWORK_NAME: "Ethereum (ERC20)"
+  OTP: ""
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Enter your app passcode to unlock\\.|Account"
+    timeout: 15000
+
+- runFlow:
+    file: subflows/unlock.yaml
+
+- tapOn: "Account"
+- tapOn: "Withdrawal accounts"
+- tapOn: "Crypto addresses"
+- assertVisible: "Crypto addresses"
+
+- tapOn:
+    point: "94%,8%"
+    label: "Add address header icon"
+- waitForAnimationToEnd
+- assertVisible: "Add address"
+
+- tapOn:
+    text: "e.g. Binance USDT Wallet"
+- eraseText: 50
+- inputText: ${LABEL}
+- hideKeyboard
+
+- tapOn:
+    text: "Enter or paste wallet address"
+- eraseText: 200
+- inputText: ${WALLET_ADDRESS}
+- hideKeyboard
+
+- tapOn:
+    text: "Select network"
+- waitForAnimationToEnd
+- runFlow:
+    file: subflows/select-network.yaml
+
+- tapOn:
+    text: "Continue"
+- waitForAnimationToEnd
+- assertVisible: "Review address"
+
+- tapOn:
+    text: "Save address"
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: "Verify your email"
+    commands:
+      - runFlow:
+          file: subflows/verify-email-otp.yaml
+
+- assertVisible: "Crypto addresses"
+- assertVisible: ${LABEL}

@@ -1,6 +1,6 @@
 ---
 name: collect-testmo-cases
-description: Collect all Testmo test cases linked to a Jira issue key and output them as structured groups. Use when user says "collect TCs for OMS-XXX", "collect testmo cases", /collect-testmo, or when another skill needs tc.md to exist.
+description: Collect all Testmo test cases linked to a Jira issue key and output them as structured groups. Use when user says "collect TCs for AO-XXX", "collect testmo cases", /collect-testmo, or when another skill needs tc.md to exist.
 ---
 
 # Collect Testmo Cases
@@ -9,12 +9,11 @@ Fetch, group, and deliver all test cases linked to a Jira issue key.
 
 ## Contract
 
-- **Args:** `{KEY}` [, `save`] [, `no-gate`] — e.g. `OMS-1120`
-- **Project ID:** look up `{KEY}`'s project in `.kiro/steering/testmo.md` → Testmo Projects table
-- **With `save`:** write `tasks/{KEY}/tc.md`, then present
-- **Without `save`:** present the structured output in chat; write no file
-- **With `no-gate`:** skip the Phase 1 Gate and proceed directly to Phase 2
-- **File exists:** ask — overwrite | reuse | abort
+- **Args:** `{KEY}` [, `save`] [, `no-gate`] — e.g. `AO-1120`
+- **Ids:** `awk '/^## /{p = /Testmo Projects|Case Field IDs/} p' .kiro/steering/testmo.md` — `{PROJECT_ID}` = 8 (the OTC row in testmo.md § Testmo Projects, matched by {KEY}'s `AO` prefix), field ids for Phase 2
+- **Writes:** `tasks/{KEY}/base/tc.md` — with `save` only, from `.kiro/skills/collect-testmo-cases/TEMPLATE.md`
+- **With `no-gate`:** overwrite an existing `tc.md` without asking (see Phase 1 Gate below for the skip condition)
+- **File exists** (with `save`, without `no-gate`): ask — overwrite | reuse | abort
 
 ## Phase 1 — Identify Cases
 
@@ -45,13 +44,13 @@ Completion criterion: every case ID from Phase 1 has a fetched record with steps
 ## Phase 3 — Group by Name
 
 Group cases by shared name prefix:
-1. Strip the trailing variant (e.g. `"- Forex Buy - Positive Profit"` → prefix `"PnL Calculation"`)
+1. Strip the trailing variant (e.g. `"PnL Calculation - Forex Buy - Positive Profit"` → prefix `"PnL Calculation"`)
 2. Cases sharing a prefix form one group; a solo case is its own group
 
 Completion criterion: every case is assigned to a group named by its prefix.
 
 ## Phase 4 — Deliver
 
-Write `tasks/{KEY}/tc.md` (using `TEMPLATE.md`), then present. Skip the write when `save` was not given; present only.
+Write `tasks/{KEY}/base/tc.md` from `.kiro/skills/collect-testmo-cases/TEMPLATE.md`, then present. Skip the write when `save` was not given; present only.
 
 Completion criterion (`save`): file exists, all N cases present, summary counts match detail counts.

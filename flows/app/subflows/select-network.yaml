@@ -1,0 +1,14 @@
+# Subflow: Select a network from the network sheet
+# Precondition: Network sheet is already open (after tapping "Select network")
+# Env: NETWORK_NAME (e.g. "Ethereum (ERC20)")
+# Note: single tap selects and closes the sheet — no search, no Done button
+appId: com.bfgto.sit.app
+---
+- scrollUntilVisible:
+    element:
+      text: ${NETWORK_NAME}
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    text: ${NETWORK_NAME}
+- waitForAnimationToEnd

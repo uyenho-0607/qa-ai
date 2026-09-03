@@ -4,15 +4,14 @@ inclusion: manual
 
 # Capture — Web Targets
 
-Targets: `bo`, `bo-mv`, `app-web`. Driver: Playwright, per `.kiro/steering/playwright-rule.md`.
-Naming, labels, timing and verification: `.kiro/steering/capture-mechanics.md`. This file is the
-Playwright mechanics for those rules, and nothing else.
+Playwright mechanics for `capture-mechanics.md`. Driver: `.kiro/steering/playwright-rule.md`.
 
-**Every path is repo-relative.** `page.screenshot({ path })` and `recordVideo.dir` resolve against the
-Playwright MCP server's working directory, so a bare `'shot.png'` lands at the repo root. Always write
-`evidence/{KEY}/…`, or `tasks/{KEY}/recon/…` for recon. (AO-925, 2026-08-26)
+Destination and file name rules: `capture-mechanics.md` § File name.
 
-## Viewport — first, always
+## Viewport — first
+
+Pack § Targets `Viewport` = `desktop` → run the probe below. A fixed size → set `vw`/`vh` from that row and
+call `page.setViewportSize({ width: vw, height: vh })` inside `run_code_unsafe` — skip the probe.
 
 ```js
 const { width, height } = await page.evaluate(() => ({ width: window.screen.width, height: window.screen.height }));
@@ -21,7 +20,7 @@ const vh = height >= 720  ? height : 1440;
 await page.setViewportSize({ width: vw, height: vh });
 ```
 
-`bo-mv` uses 390×844 instead, both for the viewport and for a recording's size.
+The resulting `vw`/`vh` feeds `recordVideo.size` below.
 
 ## Bring the element into view
 
@@ -29,17 +28,20 @@ await page.setViewportSize({ width: vw, height: vh });
 // vertical
 await page.locator('{selector}').scrollIntoViewIfNeeded({ timeout: 5000 });
 await page.waitForTimeout(300);
-// horizontal, for a wide table
-await page.evaluate(() => {
-  const c = document.querySelector('[data-testid*="table-scroll-container"]');
+// horizontal, for a wide table — selector from the platform pack § Stack quirks
+await page.evaluate((sel) => {
+  const c = document.querySelector(sel);
   if (c) c.scrollLeft = c.scrollWidth;
-});
+}, '{scroll container selector}');
 await page.waitForTimeout(500);
 ```
 
 Scroll before labelling. Never label an element sitting behind an overlay.
 
 ## Checkpoint label — one per `**Exp:**` checkpoint
+
+Label availability is the platform pack's § Label overlay answer, per `capture-mechanics.md` § Label; this
+section is only the injection mechanics.
 
 ```js
 await page.evaluate(({ label, replace }) => {
@@ -59,10 +61,12 @@ await page.evaluate(({ label, replace }) => {
 
 ## Element annotation — a bug or a fix, pointed at
 
+`{selector}` is CSS — translate the caller's `id=`/`desc=`/`text=` per the pack § Target grammar first.
+
 ```js
 await page.evaluate(({ selector, label, color }) => {
   const el = document.querySelector(selector);
-  if (!el) return;
+  if (!el) throw new Error('annotation selector unresolved: ' + selector);
   el.style.border = `3px solid ${color}`;
   el.style.backgroundColor = color === 'red' ? 'rgba(255,0,0,0.12)' : 'rgba(0,180,0,0.12)';
   const d = document.createElement('div');
@@ -101,7 +105,7 @@ Inspection. Overlay the one relevant response, truncated to the fields that matt
 Viewport → scroll into view → label or annotate → capture:
 
 ```js
-await page.screenshot({ path: 'evidence/{KEY}/{name}.png', type: 'png', scale: 'device' });
+await page.screenshot({ path: '{dest}{stem}_{target}.png', type: 'png', scale: 'device' });
 ```
 
 Where one assertion needs two states — a table and its detail panel, a closed and an open dropdown, two
@@ -109,15 +113,13 @@ pages — change the state between frames and label only what is visible in each
 
 ## Video — one replay pass per group
 
-The recording is a replay, not the test. Test the group first, then replay every step inside one recording
-context at a steady pace. Restore the starting precondition first only where the test changed state; a
-read-only flow replays as-is.
+Replay-pass rule: `capture-mechanics.md` § When to capture. Playwright mechanics for it:
 
 ```js
 const state = await page.context().storageState();
 const ctx = await page.context().browser().newContext({
   storageState: state,
-  recordVideo: { dir: 'evidence/{KEY}/', size: { width: vw, height: vh } },
+  recordVideo: { dir: '{dest}', size: { width: vw, height: vh } },
   viewport: { width: vw, height: vh },
   screen:   { width: vw, height: vh }
 });
@@ -136,7 +138,8 @@ step — `storageState()` does not carry it.
 Convert and name it, then verify per `capture-mechanics.md` § Verify:
 
 ```bash
-ffmpeg -y -i "<webm>" -c:v libx264 -preset fast -crf 23 "evidence/{KEY}/{stem}_{target}.mp4"
+ffmpeg -y -i "<webm>" -c:v libx264 -preset fast -crf 23 "{dest}{stem}_{target}.mp4"
 ```
 
-Keep the `.webm` until the user confirms the `.mp4`. One video context at a time.
+Keep the `.webm` until the user confirms the `.mp4`. One video context at a time — see `playwright-rule.md` §
+Session Reset for the two-independent-sessions exception (concurrency TCs, not two recordings).

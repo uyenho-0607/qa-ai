@@ -1,112 +1,52 @@
-# Evidence — planning
+# Evidence Strategy
 
-Design decides what evidence exists and what each file is called; `manual-exec-run` captures it, per
-`.kiro/steering/capture-mechanics.md`. Nothing here is read at run time.
-
-| Mode | What it produces |
-|---|---|
-| `normal` | VIDEO or SCREENSHOT per group, the type decided from what the scenario needs |
-| `screenshot` | one frame per checkpoint, no grouping |
-
-## Stem
-
-The plan carries the **stem**. The run appends `_{target}` and the extension, one file per entry in the TC's
-`**Tgt:**`, so a plan table never grows a column per target.
-
-```
-recording:   TC_{ids}_{slug}
-frame:       TC_{ids}_c{N}[_c{M}…]_{slug}
-```
-
-- `{ids}` — the plan's `TC-NN` numbers, zero-padded, without the `TC-` prefix, in group order, joined by `_`.
-  List every member; never collapse a range, never substitute the group ID.
-- `{slug}` — 2–4 words, snake_case, from the group's Rationale or the checkpoint's assertion.
-- `c{N}` — the checkpoint id from the TC's `**Exp:**` bullet. A shared frame lists every checkpoint it proves.
-
-Keep the whole name inside 100 characters once the run has added `_{target}` and the extension — shorten the
-slug, never the ids.
+Executed at Phase 4. Tier-1 TCs verified at recon require no further planning.
 
 ---
 
-# `normal` mode
+## File Naming (Stem)
 
-## Evidence type
+The plan defines the **stem**. The execution run appends `_{platform_id}.{ext}`. The length limit lives in `capture-mechanics.md` § File name.
 
-**VIDEO is the default. SCREENSHOT is the exception.** Any VIDEO trigger outranks every SCREENSHOT condition.
-
-Assign SCREENSHOT only when ALL hold:
-
-- The assertion is a single static state, visible in one frame
-- Nothing appears, disappears, or changes during the assertion
-- No timing, ordering, or "nothing happened" claim is involved
-- One frame proves the expected result on its own
-
-Assign VIDEO whenever ANY holds:
-
-- A toast, snackbar, banner, or transient element appears
-- An element disappears — modal or sheet closes, row removed, error clears
-- The flow spans steps: menu → click → modal → submit
-- Validation updates live as the user types
-- A toggle changes rendered content
-- The assertion is negative — "no X happened", "session not dropped"
-- The flow crosses a screen transition or a navigation push
-- Behaviour spans two contexts or sessions
-
-Capture cost is never a reason to assign SCREENSHOT.
-
-## Grouping
-
-Group into one recording when ALL hold:
-
-- Same surface, same precondition, same starting screen
-- Sequential with no teardown between them
-- Each assertion moment is distinct within the recording
-- Failure in one TC does not make another's assertion ambiguous
-
-Split when ANY holds:
-
-- Different precondition or starting screen
-- Teardown required between TCs
-- Failure in one TC would corrupt shared evidence for another
-
-Prefer a frame over a recording wherever both qualify. A TC that groups with nothing still gets its own
-one-TC group row — there is no separate solo grammar.
-
-**A `bo+app` group captures once per surface**, into files distinguished by their target suffix: the pair
-produces `…_android` and `…_bo`, both evidence for the same TC. `**Cap:**` names the moment on each side, and
-the two captures must show the hand-off in order. A paired TC is the one case where a surface change is not a
-group split.
-
-## Sharing a frame
-
-One frame may prove several checkpoints, of one TC or of several. Share it when ALL hold:
-
-- Every checkpoint it covers is visible at the same instant, without scrolling
-- All of them hold in the same state, on the same screen
-- Each is attributable from the capture — the in-frame label where the target's pack declares the overlay
-  available, the file name where it does not
-- Failure in one does not make another's assertion ambiguous
-
-Split into separate frames when any of those fails.
-
-## What the plan carries
-
-The Evidence Groups table — group, TCs, type, stem, rationale.
+- **Group / Video stem**: `TC_{ids}_{slug}`
+- **Frame stem**: `TC_{ids}_c{N}[_c{M}...]_{slug}`
+- **`{ids}`**: The case ids carried in the TC subtitles of `tc.md` — whatever the TC source named in `project-config.md` § Producers issues — joined by `_` (e.g. `161963`, or `161976_161977` for a merged pair). **NEVER use plan sequential IDs (e.g., `TC-1`)**.
+- **`c{N}`**: Numbers from the TC **Expected** list covered by the frame (e.g., `c1`, `c1_c2`).
+- **`{slug}`**: 2–4 `snake_case` words describing the assertion.
 
 ---
 
-# `screenshot` mode
+## `normal` Mode
 
-Everything is a frame: enough of them to prove every `**Exp:**` checkpoint, per entry in the TC's `**Tgt:**`
-— one each where their states differ, one shared per § Sharing a frame where they hold at the same instant.
+Populates `## Evidence` → `### Groups`.
 
-## What a frame cannot prove
+### Type Selection (SCREENSHOT Default, VIDEO Last Resort)
 
-A frame cannot show a transient element, a disappearance, an ordering, or a negative. List every checkpoint
-of those kinds as a **video escape hatch**: that TC gets a VIDEO per § Evidence type above, or the gate
-accepts the weaker frame explicitly. An unprovable checkpoint captured as a frame, unflagged, is a false pass.
+- **SCREENSHOT**: Assign by default if a still frame (or sequence of stills) proves the assertion.
+- **VIDEO**: Assign **ONLY** if ALL criteria are met:
+  1. Assertion depends on continuous timing/sequence with no resting state (e.g., transient toast clearing in 1 step).
+  2. Sequential screenshots cannot substitute.
+  3. Assertion is *not* a negative/absence check (proven by backend check + still frame).
 
-## What the plan carries
+### Grouping Rules
 
-The Checkpoint Evidence table — checkpoint ids, stem, frame count per target, and any escape hatch. No
-Evidence Groups table.
+- **Group TCs into 1 row** if ALL hold: Same platform, same precondition/starting screen, sequential execution without teardown, distinct capture moments, failure in one TC does not obscure another.
+- **Split TCs into separate rows** if ANY hold: Different preconditions, teardown required between TCs, or potential failure corruption.
+- **Cross-Platform Exception**: A paired TC is the **only case where a platform change does NOT trigger a group split**. Do not split into two platform groups; keep as 1 paired group capturing once per side into files distinguished by platform suffix (`_{platform_id}`).
+- **Solo TCs**: A TC that does not group still gets a 1-TC row in the Groups table.
+
+---
+
+## `screenshot` Mode
+
+Populates `## Evidence` → `### Frames`. Omit the Groups table entirely.
+
+### Frame Sharing Rules
+One frame may prove multiple expected results (within or across TCs) ONLY if ALL hold:
+- Every covered entry is visible simultaneously without scrolling.
+- All entries hold at the same instant on the same screen.
+- Failure in one assertion does not make another ambiguous.
+
+### Frame Limitations (`Video needed for`)
+- Screenshots cannot prove transient elements, disappearances, strict ordering, or negative states.
+- List any such expected result entry in the `Video needed for` column and assign a VIDEO for that specific assertion.

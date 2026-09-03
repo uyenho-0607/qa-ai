@@ -13,7 +13,7 @@ Execution skill for Jira write operations. Called by `report-bug`, `verify-bug`,
 
 Extract Jira constants before the first write call:
 ```bash
-awk '/^## /{p = /Rovo MCP|Project Rules|Transitions/} p' .claude/steering/jira.md
+awk '/^## /{p = /Rovo MCP|Transitions/} p' .claude/steering/jira.md
 ```
 Read `.claude/skills/jira-handler/dev-team.md` for dev-team account IDs.
 
@@ -30,11 +30,11 @@ Read `.claude/skills/jira-handler/dev-team.md` for dev-team account IDs.
 | `jira_desc_update.py --issue {KEY} --file {path} --filename {name} --adf-file {path}` | Upload + set description (atomic) |
 | `jira_desc_update.py --get-media-uuid {IDs}` | Resolve attachment IDs → UUIDs (helper) |
 
-All at `.claude/skills/jira-handler/`. Prefix with `python3`.
+All at `.claude/skills/jira-handler/`. Run with `.venv/bin/python3`.
 
 ### Multiple Files Syntax
 
-For multiple files, **repeat the flags** (not comma/space-separated):
+For multiple files, repeat the flags:
 
 ```bash
 .venv/bin/python3 .claude/skills/jira-handler/jira_comment.py \
@@ -43,9 +43,6 @@ For multiple files, **repeat the flags** (not comma/space-separated):
   --filename "display1.png" --filename "display2.png" \
   --comment $'Comment text'
 ```
-
-❌ WRONG: `--file file1.png,file2.png` or `--filename "name1.png" "name2.png"`
-✅ RIGHT: `--file file1.png --file file2.png --filename name1.png --filename name2.png`
 
 ---
 
