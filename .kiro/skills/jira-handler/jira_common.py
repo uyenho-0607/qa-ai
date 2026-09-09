@@ -3,7 +3,9 @@
 import base64
 import os
 import re
+import shutil
 import ssl
+import subprocess
 import urllib.request
 from pathlib import Path
 
@@ -162,3 +164,103 @@ def markdown_to_adf_content(comment_text: str) -> list:
         i += 1
 
     return blocks
+
+
+def media_size(path: str):
+    """Read a file's real pixel dimensions -> (width, height), or None.
+
+    ADF media nodes carry intrinsic size only to pin the aspect ratio; the
+    rendered size lives on the mediaSingle parent. A wrong intrinsic makes the
+    renderer reserve the wrong box, so read the true numbers per file.
+
+    PNG and JPEG are parsed from the header (no dependency); video falls back
+    to ffprobe when installed. Anything unreadable returns None.
+    """
+    p = Path(path)
+    try:
+        head = p.open("rb").read(2)
+    except OSError:
+        return None
+
+    if head == b"\x89P":
+        return _png_size(p)
+    if head == b"\xff\xd8":
+        return _jpeg_size(p)
+    return _ffprobe_size(p)
+
+
+def _png_size(p: Path):
+    """IHDR is always the first chunk: width/height as big-endian uint32."""
+    with p.open("rb") as f:
+        data = f.read(24)
+    if len(data) < 24 or data[:8] != b"\x89PNG\r\n\x1a\n":
+        return None
+    return (
+        int.from_bytes(data[16:20], "big"),
+        int.from_bytes(data[20:24], "big"),
+    )
+
+
+def _jpeg_size(p: Path):
+    """Walk the segment chain to the SOF marker that holds the dimensions."""
+    sof = set(range(0xC0, 0xC4)) | set(range(0xC5, 0xC8)) | set(range(0xC9, 0xCC))
+    sof |= set(range(0xCD, 0xD0))
+    with p.open("rb") as f:
+        if f.read(2) != b"\xff\xd8":
+            return None
+        while True:
+            byte = f.read(1)
+            if not byte:
+                return None
+            if byte != b"\xff":
+                continue
+            marker = f.read(1)
+            while marker == b"\xff":  # fill bytes
+                marker = f.read(1)
+            if not marker:
+                return None
+            code = marker[0]
+            if code in (0xD8, 0xD9) or 0xD0 <= code <= 0xD7:
+                continue
+            length = f.read(2)
+            if len(length) < 2:
+                return None
+            seg = int.from_bytes(length, "big") - 2
+            if code in sof:
+                body = f.read(5)
+                if len(body) < 5:
+                    return None
+                height = int.from_bytes(body[1:3], "big")
+                width = int.from_bytes(body[3:5], "big")
+                return (width, height)
+            f.seek(seg, 1)
+
+
+def _ffprobe_size(p: Path):
+    """Video dimensions via ffprobe. None when ffprobe is absent or fails."""
+    if not shutil.which("ffprobe"):
+        return None
+    try:
+        out = subprocess.run(
+            [
+                "ffprobe",
+                "-v",
+                "error",
+                "-select_streams",
+                "v:0",
+                "-show_entries",
+                "stream=width,height",
+                "-of",
+                "csv=p=0:s=x",
+                str(p),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=20,
+        ).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return None
+    parts = out.split("x")[:2]
+    if len(parts) != 2 or not all(x.isdigit() for x in parts):
+        return None
+    return (int(parts[0]), int(parts[1]))

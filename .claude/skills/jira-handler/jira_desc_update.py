@@ -38,6 +38,7 @@ from jira_common import (
     get_jira_client,
     get_media_uuid,
     get_ssl_context,
+    media_size,
     server,
 )
 
@@ -75,7 +76,9 @@ def main():
     )
     parser.add_argument(
         "--adf-file",
-        help="Path to ADF JSON file. Use {MEDIA_1}, {MEDIA_2}... as placeholders for uploaded file UUIDs.",
+        help="Path to ADF JSON file. Use {MEDIA_1}, {MEDIA_2}... as placeholders "
+        "for uploaded file UUIDs, and \"{WIDTH_1}\"/\"{HEIGHT_1}\" for their real "
+        "pixel dimensions.",
     )
     parser.add_argument(
         "--get-media-uuid",
@@ -98,8 +101,8 @@ def main():
 
     jira = get_jira_client()
 
-    # Upload files if provided and collect UUIDs
-    media_uuids = []
+    # Upload files if provided and collect UUIDs + real dimensions
+    media = []
     if args.file:
         filenames = args.filename or []
         for i, filepath in enumerate(args.file):
@@ -110,15 +113,20 @@ def main():
             att_id = att.id if hasattr(att, "id") else None
             print(f"Attached {fname} to {args.issue} (id={att_id})")
             uuid = get_media_uuid(str(att_id))
-            media_uuids.append(uuid)
+            size = media_size(filepath)
+            if size is None:
+                print(f"  ! dimensions unreadable for {fname} — falling back to 16:9")
+            media.append((uuid, size or (2560, 1440)))
 
     # Read ADF file
     with open(args.adf_file) as f:
         adf_text = f.read()
 
-    # Replace placeholders {MEDIA_1}, {MEDIA_2}, etc. with actual UUIDs
-    for i, uuid in enumerate(media_uuids, start=1):
+    # Replace {MEDIA_n} with the UUID, {WIDTH_n}/{HEIGHT_n} with real dimensions
+    for i, (uuid, (width, height)) in enumerate(media, start=1):
         adf_text = adf_text.replace(f"{{MEDIA_{i}}}", uuid)
+        adf_text = adf_text.replace(f'"{{WIDTH_{i}}}"', str(width))
+        adf_text = adf_text.replace(f'"{{HEIGHT_{i}}}"', str(height))
 
     adf_body = json.loads(adf_text)
 

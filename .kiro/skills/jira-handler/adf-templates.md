@@ -14,7 +14,7 @@
     // mediaSingle node(s) — RIGHT AFTER Actual Result
     {
       "type": "mediaSingle",
-      "attrs": {"layout": "full-width"},
+      "attrs": {"layout": "center", "width": 500, "widthType": "pixel"},
       "content": [{
         "type": "media",
         "attrs": {
@@ -22,8 +22,8 @@
           "id": "{MEDIA_1}",
           "alt": "filename.png",
           "collection": "",
-          "width": 2560,
-          "height": 1440
+          "width": "{WIDTH_1}",
+          "height": "{HEIGHT_1}"
         }
       }]
     },
@@ -42,12 +42,13 @@
 - ALWAYS `"type": "file"` (NOT `"type": "external"`) — enables inline playback
 - `"collection": ""` — always empty string
 - `"id"` = media UUID (NOT the attachment numeric ID)
-- **mediaSingle layout:** Always use `"layout": "full-width"`. Never use `"center"` — it shrinks portrait/vertical images to unreadable thumbnails.
+- **Image size:** two nodes, two jobs. `media.width`/`media.height` = the file's **real** pixel size (aspect ratio only — never guess it). `mediaSingle.width` + `"widthType": "pixel"` = the **rendered** width. Height is not settable; the renderer derives it as `mediaSingle.width × (media.height / media.width)`.
+- **mediaSingle layout:** `"layout": "center"` with a pixel width — 500px is the default. `"full-width"` only when the real dimensions are unknown; a fake intrinsic on a portrait screenshot is what made images render as thumbnails.
 - Place mediaSingle AFTER "Actual Result", BEFORE "Expected Result"
 - Multiple evidence = multiple mediaSingle nodes in sequence
 - URLs in STR: `"marks": [{"type": "link", "attrs": {"href": "..."}}]`
 - Code/API paths: `"marks": [{"type": "code"}]`
-- Use `{MEDIA_1}`, `{MEDIA_2}` placeholders — `jira_desc_update.py` replaces them
+- Use `{MEDIA_1}`, `{MEDIA_2}` placeholders — `jira_desc_update.py` replaces them, and `"{WIDTH_1}"`/`"{HEIGHT_1}"` (quoted) with the file's real dimensions
 
 ---
 
