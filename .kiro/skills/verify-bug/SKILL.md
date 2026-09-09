@@ -48,7 +48,7 @@ Evidence: {type} x{count}, one per target
 4. Propose finding → GATE: wait for user agreement, with the evidence file paths already in hand. State the result per target, never averaged
 
 ### 4. Post Comment
-Invoke `jira-handler` skill — action: `post_verification`. Pass `key={KEY}`, the file paths `capture-evidence` returned, `env={env}`, `verdict={Verified FIXED|Verified NOT FIXED}`, and the per-target result text.
+Invoke `jira-handler` skill — action: `post_verification`. Pass `key={KEY}`, the file paths `capture-evidence` returned, `env={env}`, `verdict={Passed|Failed}`, and the per-target result text.
 - State the result per target, naming its device identifier or URL and the build
 
 ### 5. Transition

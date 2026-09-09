@@ -29,7 +29,7 @@ description: Report SIT bug — classify FE/BE, capture evidence, create a SIT B
 Present and wait for approval:
 ```
 PLAN: Bug under {PARENT}
-Title: [{PROJECT_KEY}][{Module}] {symptom summary}
+Title: [{PROJECT_KEY}][{Module}] {symptom summary} — AQXPAY-OTC (Jira key `AO`) uses `[OTC][Module]`, not `[AO][Module]`
 Target: {ids from § Platforms — every one it reproduces on}
 Symptom: {what's wrong}
 Expected: {correct behavior}
@@ -47,7 +47,7 @@ Label: {what is verified}
 
 ### 4. Create Bug
 Invoke `jira-handler` skill — action: `create_bug`
-- summary: `[{PROJECT_KEY}][Module] symptom`
+- summary: `[{PROJECT_KEY}][Module] symptom` (AQXPAY-OTC → `[OTC][Module]`)
 - Name every target the defect reproduced on, with its device identifier or URL
 - Bug text: simple English, ≤12 words a sentence, active voice, present tense. State the observed defect; nothing about how it was found.
 - assignee: from the confirmed FE/BE classification per `.kiro/skills/jira-handler/dev-team.md` § Assignment Rule

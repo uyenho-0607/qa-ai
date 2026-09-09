@@ -6,13 +6,13 @@ Usage:
     # Single file + comment
     .venv/bin/python3 .kiro/skills/jira-handler/jira_comment.py --issue OMS-807 \
         --file ./video.mp4 --filename name.mp4 \
-        --comment $'✅ Verified FIXED — SIT\n\n**Result:**\n- bullet 1'
+        --comment $'**Failed** - Error is raised on the 11th attempt instead of the 10th'
 
     # Multiple files + comment (ONE comment, all media inline)
     .venv/bin/python3 .kiro/skills/jira-handler/jira_comment.py --issue OMS-807 \
         --file ./screenshot.png --filename neg.png \
         --file ./video.mp4 --filename pos.mp4 \
-        --comment $'✅ Verified FIXED — SIT\n\n**Result:**\n- negative case OK\n- positive case OK'
+        --comment $'**Passed** - Negative and positive cases both behave per AC'
 
     # Override the inline width (default 500px, height follows aspect ratio)
     .venv/bin/python3 .kiro/skills/jira-handler/jira_comment.py --issue OMS-807 \
@@ -21,7 +21,7 @@ Usage:
 
     # Comment only (no attachment)
     .venv/bin/python3 .kiro/skills/jira-handler/jira_comment.py --issue OMS-807 \
-        --comment $'✅ Verified FIXED — SIT\n\n**Result:**\n- details'
+        --comment $'**Passed** - Lockout fires on the 10th attempt per AC'
 
     # Delete a comment
     .venv/bin/python3 .kiro/skills/jira-handler/jira_comment.py --issue OMS-807 --delete 240061

@@ -59,12 +59,15 @@ For multiple files, repeat the flags:
 ## Action: post_verification
 
 ```bash
-.venv/bin/python3 .claude/skills/jira-handler/jira_comment.py --issue {KEY} --file {path} --filename {name} --comment $'{emoji} Verified {verdict} — {ENVIRONMENT}\n\n**Result:**\n{result_text}'
+.venv/bin/python3 .claude/skills/jira-handler/jira_comment.py --issue {KEY} --file {path} --filename {name} --comment $'**{verdict}** - {result_text}'
 ```
 
-- `✅ Verified FIXED` or `❌ Verified NOT FIXED`
+- `**Passed**` or `**Failed**` — bold; `jira_common.py` § `VERDICT_COLORS` colours them green/red
 - ONE comment per event, all media inlined
 - Multiple files: repeat `--file`/`--filename` pairs
+- **Result text: observed vs expected, one line.** No methodology, no tool names, no run narration, no restating the ticket. Past 2 lines it is carrying explanation that belongs in the attachment
+  - Good: `**Failed** - Error is raised correctly but on the 11th attempt instead of the 10th attempt`
+  - Bad: `Re-verified via a full Maestro-driven flow (video + per-attempt screenshots)… the originally reported defect does not reproduce exactly as described, however the ticket's core expectation still fails…`
 
 ---
 
@@ -81,3 +84,4 @@ For multiple files, repeat the flags:
 - NEVER create bug without evidence
 - NEVER leave an unfilled `{MEDIA_N}` — placeholder count must equal `--file` count, else Jira 400s on a literal `{MEDIA_N}` media id
 - NEVER post multiple comments for one verification
+- **Wrong comment → `--delete {comment_id}` in the same call that posts the replacement. Never a correction comment.** A wrong attachment needs `jira_attach.py --delete {att_id}` too — deleting the comment leaves the file in Attachments

@@ -85,8 +85,16 @@ def get_media_uuid(attachment_id: str) -> str:
     raise ValueError(f"Expected redirect for attachment {attachment_id}")
 
 
+# Verdict words carry Jira's bold palette colour on top of **bold**, so a comment's
+# result line reads Passed/Failed at a glance. Keys are matched exactly, case-sensitive.
+VERDICT_COLORS = {"Passed": "#00875a", "Failed": "#de350b"}
+
+
 def parse_inline_marks(text: str) -> list:
-    """Parse **bold** and `code` marks from text into ADF inline nodes."""
+    """Parse **bold** and `code` marks from text into ADF inline nodes.
+
+    A bold span whose text is a VERDICT_COLORS key also gets a textColor mark.
+    """
     nodes = []
     pattern = r"(\*\*(.+?)\*\*|`(.+?)`)"
     last_end = 0
@@ -99,9 +107,11 @@ def parse_inline_marks(text: str) -> list:
                 nodes.append({"type": "text", "text": plain})
 
         if match.group(2):  # bold
-            nodes.append(
-                {"type": "text", "text": match.group(2), "marks": [{"type": "strong"}]}
-            )
+            marks = [{"type": "strong"}]
+            color = VERDICT_COLORS.get(match.group(2))
+            if color:
+                marks.append({"type": "textColor", "attrs": {"color": color}})
+            nodes.append({"type": "text", "text": match.group(2), "marks": marks})
         elif match.group(3):  # code
             nodes.append(
                 {"type": "text", "text": match.group(3), "marks": [{"type": "code"}]}
