@@ -3,7 +3,8 @@
 Source: live walk-through on an Android emulator, 2026-08-26.
 Build: `app-release.apk`, package `com.bfgto.sit.app`, versionName 0.15.0 (versionCode 1),
 minSdk 24 / targetSdk 36. React Native + Expo (SDK 57), Hermes, bridgeless.
-Device: AVD `pixel6` — Android 15 (SDK 35), 1080x2400, density 420.
+Device: any Android emulator with the app installed. Also verified on AVD `Pixel_9` —
+1080x2424 — for the passcode-unlock step, which needs no coordinates (see below).
 
 This is the **operational** side: how to actually get logged in on a device, and what bites.
 The product **spec** for Login — rules, error strings, lockout limits, statuses — lives in
@@ -35,8 +36,8 @@ for what each requires.
 
 Tags: `#device` `#setup` `#creds` `#otp` `#launch` `#gotcha` `#scope`
 
-#device  Boot | `emulator -avd pixel6`, backgrounded | the `mobile` server does NOT boot an AVD
-#device  AVD | use `pixel6` | `pixel7pro` also exists and voids every cached coordinate
+#device  Boot | `emulator -avd <name>`, backgrounded | the `mobile` server does NOT boot an AVD
+#device  AVD | any AVD with the app installed works | cached `android.tap` coordinates were measured at 1080x2400 (pixel6) — a different resolution may need retapping
 #device  Install | `app-release.apk` at repo root | a fresh/wiped AVD has no app installed
 #setup   Env gate | `aq@aq.com` | one-time per INSTALL | fresh install only | reset: `adb shell pm clear com.bfgto.sit.app`
 #setup   App passcode | `111111` | one-time per DEVICE | first login on that device | entered twice (Create → Confirm)
@@ -58,12 +59,14 @@ Cold machine to a running app. This precedes everything below.
 **The driver attaches to devices; it does not boot them.** Listing devices returns only what is *already*
 connected. Booting is a shell step, and it comes first.
 
-**Use `pixel6`.** Every coordinate in the cache was measured on it at 1080x2400.
-`pixel7pro` exists on this machine and voids all of them.
+**Any AVD with the app installed works.** Cached `android.tap` coordinates were measured at
+1080x2400 (AVD `pixel6`) — a different resolution may put them off; retap and update the
+cache if so. Steps that don't rely on coordinates (e.g. passcode unlock, which types digits
+directly with no tap) are resolution-independent.
 
 ```bash
 # 1. boot — run this in the background; the emulator process never returns
-emulator -avd pixel6
+emulator -avd <name>
 
 # 2. wait for it — `am start` or any driver call against a booting device fails "device offline".
 #    The sleep runs inside the device shell, so it does not block the host.
@@ -196,7 +199,7 @@ leading digit (2026-08-27) — clear with `keyevent 67` and send digit-by-digit.
   is the other option.
 - **The emulator can die on app launch.** The qemu process itself exits, so adb reports no
   devices rather than an offline one. Check with `pgrep -fl qemu` before debugging adb;
-  reboot with `emulator -avd pixel6`.
+  reboot with `emulator -avd <name>`.
 - **`desc=Log out` matches two nodes** once the confirm sheet is open — the menu row and the
   sheet button. Disambiguate by y.
 - **An `EditText`'s `text` is the placeholder while empty**, the typed value once filled. To
