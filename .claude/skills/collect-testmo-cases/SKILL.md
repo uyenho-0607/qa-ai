@@ -1,6 +1,6 @@
 ---
 name: collect-testmo-cases
-description: Collect all Testmo test cases linked to a Jira issue key and output them as structured groups. Use when user says "collect TCs for AO-XXX", "collect testmo cases", /collect-testmo, or when another skill needs tc.md to exist.
+description: Collect all Testmo test cases linked to a Jira issue key and output them as structured groups. Use when user says "collect TCs for WT-XXXX", "collect testmo cases", /collect-testmo, or when another skill needs tc.md to exist.
 ---
 
 # Collect Testmo Cases
@@ -9,8 +9,8 @@ Fetch, group, and deliver all test cases linked to a Jira issue key.
 
 ## Contract
 
-- **Args:** `{KEY}` [, `save`] [, `no-gate`] — e.g. `AO-1120`
-- **Ids:** `awk '/^## /{p = /Testmo Projects|Case Field IDs/} p' .claude/steering/testmo.md` — `{PROJECT_ID}` = 8 (the OTC row in testmo.md § Testmo Projects, matched by {KEY}'s `AO` prefix), field ids for Phase 2
+- **Args:** `{KEY}` [, `save`] [, `no-gate`] — e.g. `WT-11767`
+- **Ids:** `awk '/^## /{p = /Testmo Projects|Case Field IDs/} p' .claude/steering/testmo.md` — `{PROJECT_ID}` = 5 (the WT row in testmo.md § Testmo Projects, matched by {KEY}'s `WT` prefix), field ids for Phase 2
 - **Writes:** `tasks/{KEY}/base/tc.md` — with `save` only, from `.claude/skills/collect-testmo-cases/TEMPLATE.md`
 - **With `no-gate`:** overwrite an existing `tc.md` without asking (see Phase 1 Gate below for the skip condition)
 - **File exists** (with `save`, without `no-gate`): ask — overwrite | reuse | abort
@@ -21,7 +21,16 @@ Call `testmo_find_cases_by_issue(projectId: {PROJECT_ID}, issueKey: "{KEY}")`.
 
 The response is a `folders` map: `"<folderId> <folderName>"` → list of `"<caseId> <caseName>"` strings. Parse every case ID, name, and folder assignment from it.
 
-Completion criterion: every case ID from the response is recorded with its name and folder.
+**WT fallback — this call returns nothing.** `custom_reqreference` is empty on every WT case, so
+issue-key lookup never matches (`testmo.md` § `custom_reqreference` is empty). When the response is
+empty:
+1. `testmo_list_cases(projectId: {PROJECT_ID}, name: "{KEY}")` — matches the `WT-xxxx_TC-xx` label
+   form when case names carry it.
+2. If still nothing, ask the user which folder(s) hold `{KEY}`'s cases — cross-check the ticket's
+   feature area against `.claude/domain/tc-naming-ref.md`'s Module/Sub-module/Feature tree — then
+   `testmo_list_cases(projectId: {PROJECT_ID}, folderId: ID, recursive: true)`.
+
+Completion criterion: every case ID found (by either path) is recorded with its name and folder.
 
 ## Phase 1 Gate *(skip if `no-gate`, or if invoked by another skill or agent)*
 

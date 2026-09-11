@@ -27,13 +27,17 @@ Replay-pass rule: `capture-mechanics.md` § When to capture. Mobile mechanics fo
    returned, a prior recording is still active (e.g. left running after a crash). Kill it with
    `adb shell kill {PID}` before starting fresh. A zombie recording silently blocks the new one. On a target
    with no such probe, stop any running recording before starting one.
-2. Start the recorder writing to the absolute path of `{dest}{stem}_{target}.mp4`, with a duration limit above
+2. **Switch the tap indicator on** — `adb shell settings put system show_touches 1`. Android draws a circle
+   at every tap and `screenrecord` captures it, so the recording shows what was pressed. Restore it with
+   `show_touches 0` wherever the recorder is stopped, including the failure path. iOS offers no equivalent:
+   an iOS recording is attributed by its file name and the caller's result note alone.
+3. Start the recorder writing to the absolute path of `{dest}{stem}_{target}.mp4`, with a duration limit above
    the replay's expected length. A recording that hits its limit is truncated. Android's `screenrecord`
    caps at **180s** by default — past that, drive `adb shell screenrecord --time-limit 0` and pull the file.
    Any other per-target recorder cap belongs in that platform's pack § Stack quirks.
-3. Replay the group's steps, noting the elapsed second each checkpoint lands on — those seconds go in the
+4. Replay the group's steps, noting the elapsed second each checkpoint lands on — those seconds go in the
    caller's result note.
-4. Stop the recorder, and read back the path, size and duration it reports.
+5. Stop the recorder, and read back the path, size and duration it reports.
 
 One recording per device at a time. A second start on a recording device is refused, not queued.
 

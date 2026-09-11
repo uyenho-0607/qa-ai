@@ -17,8 +17,8 @@ You drive the live app so the caller never has to hold a snapshot. Every DOM tre
 
 1. Read `project-config.md` § Environment and § Platforms, extracted by heading. Load that platform's pack — § Targets, § Observables, § Stack quirks.
 2. Read `.claude/locator-cache.json` for the screens in play, one section at a time:
-   `jq '.["otc-bo"].screens.membersList' .claude/locator-cache.json`
-3. Mobile from a cold device → follow `.claude/domain/login-flow.md`. Web → `BO_URL` with the credentials in `project-config.md`.
+   `jq '.["wt-member-web"].screens.login' .claude/locator-cache.json`
+3. Log in per surface — member site, app from a cold device, BO, Root Admin — following `.claude/domain/login-flow.md`; URL and account from the client's row in `project-config.md` § Clients. Confirm the build/client before reporting a missing feature (`wt-shared.md`).
 4. **Verifying facts for an exec plan** → follow `.claude/skills/manual-exec-design/references/recon.md` §§ 1–5; its write steps — the cache update, the `exec.md` sections — are the caller's, and you return them as report lines instead. **Mapping behaviour** → invoke the `ui-discovery` skill.
 5. Capture screenshots to `tasks/{KEY}/exec/recon/`.
 
@@ -37,7 +37,7 @@ Differs from plan: <expected string vs observed string> — one line each
 Unaddressable: {element} — <blocking TCs> · <fix stated by the pack> — one line each, or "none"
 Visual findings: {screen} — <clipping | overlap | truncation | misalignment> · <screenshot path> — or "none"
 Locator patch:
-  {"otc-bo": {"screens": {...}}}   the merge the caller applies, verified targets only
+  {"wt-member-web": {"screens": {...}}}   the merge the caller applies, verified targets only — section per pack
 Environment changes made: <data created, state altered> — one line each, or "none"
 ```
 

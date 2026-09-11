@@ -14,7 +14,7 @@ The feedback lives on the QA Preparation sub-task; the cases live in Testmo. Car
 | | |
 |---|---|
 | **Args** | `{KEY}` (the parent ticket) [, `no-gate`] |
-| **Ids** | `PROJECT_ID = 8` (OTC) — per `.claude/steering/testmo.md` § Testmo Projects |
+| **Ids** | `PROJECT_ID = 5` (WT) — per `.claude/steering/testmo.md` § Testmo Projects |
 | **Steering** | `tc-feedback-actions.md`, `tc-design-guide.md` |
 | **Jira** | `searchJiraIssuesUsingJql`, `getJiraIssue` — read only |
 | **Testmo** | `testmo_update_cases`, `testmo_create_cases`, `testmo_delete_cases` |
@@ -80,7 +80,7 @@ Feedback — {KEY} / {SUBTASK-KEY}    [n] items · delete [n] · update [n] · a
 | 1 | "..." | 4821 — Sign Up – … | update | ER also asserts Continue stays disabled |
 | 2 | "..." | 4830 — Sign Up – … | delete | Deprecate — covered by 4821 |
 | 3 | "..." | (new) | add | New case in folder [n]: [name] |
-| 4 | "..." | — | defer | AO-XXX handles this |
+| 4 | "..." | — | defer | WT-XXXX handles this |
 ```
 
 An item matching no existing case is `add (new)`, called out as a coverage gap.

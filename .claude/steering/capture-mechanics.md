@@ -61,6 +61,18 @@ Whether the label goes in the frame is the target's own answer — read § Label
 **Available**: the label is injected into the frame, clear of the elements it marks, and one frame may carry
 several labelled checkpoints. **Not available**: the capture is attributed by its file name alone.
 
+## Pointer overlay
+
+**Recordings only, always on.** A recording shows where each interaction lands; a still frame marks its
+target with an annotation instead, so a pointer never appears in a `.png`. What draws it is the group's
+answer, and its mechanics live in that group's capture file:
+
+| Group | What marks the interaction |
+|---|---|
+| `web` | a drawn pointer, injected into the recording context and following the driver's own mouse |
+| `device` — Android | the OS tap circle, switched on for the recording |
+| `device` — iOS | nothing available; the file name and the caller's result note attribute it |
+
 ## No sidecars
 
 **Never write a `.md` beside a capture.** `tasks/{KEY}/exec/evidence/` holds `.png` and `.mp4` files and nothing else.

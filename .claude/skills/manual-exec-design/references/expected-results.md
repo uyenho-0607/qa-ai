@@ -4,7 +4,8 @@
 
 - Check `.claude/domain/flows.md` or platform domain files **before** writing expected results.
 - Quote and cite domain files directly for live-observed error text, validation rules, column sets, and state transitions.
-- Derive assertions from scratch **only** if no domain file records the observed value.
+- **Trading/business-rule expected results** (order lifecycle, margin/account-info calculations, SL/TP or stop-limit gating, matrix-point-dependent behaviour) — dispatch the `domain-expert` agent with the specific question instead of reading `.claude/domain/*.md` directly. It returns `[KB]`-tagged answers with citations and flags `NOT DOCUMENTED` gaps; carry any gap into the exec plan as `needs-clarification` rather than inferring the rule.
+- Derive assertions from scratch **only** if `domain-expert` (for trading rules) or the domain files (for everything else) record nothing on the observed value.
 
 ## Depth levels
 

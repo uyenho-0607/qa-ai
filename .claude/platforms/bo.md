@@ -3,16 +3,16 @@
 Shape: `.claude/platforms/TEMPLATE.md`. Loaded only when a `bo*` platform is enabled in
 `.claude/steering/project-config.md` § Platforms.
 
-Domain: `.claude/domain/otc-bo.md`, roles under § Roles & Permissions.
-Shared across platforms — password policy, OTP, statuses, decimal precision: `.claude/domain/otc-shared.md`.
-Cached locators: `.claude/locator-cache.json` § `otc-bo`.
+Domain: `.claude/domain/wt-admin.md` § Back Office — one BO **per client**; the URL is the client's row in
+`project-config.md` § Clients. Shared across platforms — matrix, clients, password policy, OTP:
+`.claude/domain/wt-shared.md`. Login (captcha, user pool): `.claude/domain/login-flow.md` § Back Office.
+Cached locators: `.claude/locator-cache.json` § `wt-bo`.
 
 ## Targets
 
 | Platform id | Label | Viewport | Driver rule |
 |---|---|---|---|
 | `bo` | Back Office | desktop | `.claude/steering/playwright-rule.md` |
-| `bo-mv` | Back Office (mobile view) | 390×844 | `.claude/steering/playwright-rule.md` |
 
 ## Target grammar
 
@@ -25,8 +25,9 @@ Cached locators: `.claude/locator-cache.json` § `otc-bo`.
 Resolution order `id= > desc= > role+name > text=`, per `playwright-rule.md` § DOM-First Rule.
 **A coordinate never enters a plan.**
 
-Coverage varies by deployment. Where `document.querySelectorAll('[data-testid]').length` returns 0, every
-target string falls through to role+name, CSS or attribute — record that at the gate, it is worth an ask.
+Coverage is **unknown** — the reference automation drives this surface by API only and holds no BO locators.
+Run `document.querySelectorAll('[data-testid]').length` at the gate; where it returns 0, every target string
+falls through to role+name, CSS or attribute — record that, it is worth an ask.
 
 ## Observables
 
@@ -61,9 +62,12 @@ A wave depending on a logged-out start states `fresh context`; the runner never 
 
 ## Preflight
 
-- URL: `BO_URL` from `project-config.md` § Environment — confirm it responds
-- Browser: chromium. Each target at the `Viewport` its § Targets row gives
+- URL: the client's BO URL from `project-config.md` § Clients (`BO_URL` is the default client) — confirm it responds
+- Login: `BO_USER` + `BO_PASSWORD` + captcha `CAPTCHA_SIT` — `login-flow.md` § Back Office
+- Client and env of this BO stated in the plan — a BO change reaches every tester on that client
+- Browser: chromium, desktop viewport
 - Build: the page footer, or `unknown`
+- **Never on prod** — BO is blocked there
 
 ## Stack quirks
 
@@ -71,10 +75,10 @@ Values `playwright-rule.md` and `capture-web.md` name as placeholders and never 
 
 | Placeholder | Value here |
 |---|---|
-| component library | Ant Design |
-| hidden-state overlay class | `.ant-dropdown:not(.ant-dropdown-hidden) …` — a closed dropdown stays mounted |
-| `{scroll container selector}` | `[data-testid*="table-scroll-container"]` |
-| `API_PATHS` | `['/api/', '/backoffice/']` |
+| component library | `<FILL_IN>` — discover on first recon |
+| hidden-state overlay class | `<FILL_IN>` |
+| `{scroll container selector}` | `<FILL_IN>` |
+| `API_PATHS` | `['/api/admin/', '/backoffice/', '/configuration/']` |
 
-A fixed-position drawer has `offsetParent === null` here, so that is not a visibility test — filter
-`[role=dialog]` by `getBoundingClientRect().width > 0` instead.
+Symbol config, pretrade, OCT, price-alert and copy-trade settings each post to `/api/admin/backoffice/config/v1/…`
+or `/api/admin/configuration/v2/symbols` — the endpoints to watch when confirming a BO save landed.

@@ -88,7 +88,7 @@ cat .claude/steering/tc-scenario-guide.md .claude/steering/tc-design-guide.md
 
 - **Refs** — every `AC-n` / `BR-n` / `ERR-n` the scenario covers. Every id from Phase 1 appears in at least one row; an id no scenario covers gets its own row with Status `gap` and the reason.
 - **Crit** — Business Criticality per `tc-priority-guide.md`: High | Medium | Low.
-- **Expected-value source** — the AC, error-message row, live UI observation, or domain file the expected result comes from. No source → Status `needs-clarification` and no invented value.
+- **Expected-value source** — the AC, error-message row, live UI observation, or domain file the expected result comes from. For a trading/business-rule value (order lifecycle, margin/account-info calculation, SL/TP or stop-limit gating, matrix-point-dependent behaviour), dispatch the `domain-expert` agent instead of reading domain files directly, and cite its answer. No source → Status `needs-clarification` and no invented value.
 - **Status** — `new`, `covered by [existing TC name]` (from 1.6), `gap`, or `needs-clarification`.
 
 **2.3 Grill.** Dispatch the `tc-grader` agent for `{KEY}` with `plan`. Apply every finding it returns to `tc-plan.md`, and move a row you cannot resolve to Status `needs-clarification` with the grader's question attached.

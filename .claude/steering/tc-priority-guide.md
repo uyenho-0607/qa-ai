@@ -5,7 +5,7 @@ Score every TC against the factors. Priority follows the decision rules, first m
 ## Factors
 
 **Business Criticality**
-- High: core flow — login, sign up, convert, OTC approval, withdrawal, balance approval
+- High: core flow — login, place order, modify/close an open position, SL/TP edit, margin/liquidation checks
 - Medium: supporting flow — settings, configuration
 - Low: display, cosmetic, rarely used
 

@@ -44,7 +44,7 @@ Feedback — {TAB}    [n] comments · delete [n] · update [n] · add [n] · def
 | TC-nn | "..." | update | Change pre-req to X; update ER to Y |
 | TC-nn | "..." | delete | Remove TC — covered by TC-mm |
 | (new) | "..." | add | Insert new TC before TC-nn: [scenario description] |
-| TC-nn | "..." | defer | AO-XXX handles this — no change |
+| TC-nn | "..." | defer | WT-XXXX handles this — no change |
 ```
 
 **GATE — stop until the user approves, adjusts, or skips individual items.** *(skip with `no-gate`)*
@@ -128,7 +128,7 @@ Applied — {TAB}    [n] fixes · [n] pending · [n] skipped
 | TC-nn | updated | Pre-req corrected to X screen |
 | TC-nn | deleted | Removed — covered by TC-mm |
 | TC-nn (new) | added | New TC: {scenario name}, inserted before TC-mm |
-| TC-nn | deferred | AO-XXX handles network interruption |
+| TC-nn | deferred | WT-XXXX handles network interruption |
 
 Col P notes written to: [list of rows]
 Comments resolved: [n] (manual resolution may still be needed in Sheets UI)

@@ -1,220 +1,162 @@
-# BFG OTC App — Login Flow (runbook; Android verified)
+# WT login runbook
 
-Source: live walk-through on an Android emulator, 2026-08-26.
-Build: `app-release.apk`, package `com.bfgto.sit.app`, versionName 0.15.0 (versionCode 1),
-minSdk 24 / targetSdk 36. React Native + Expo (SDK 57), Hermes, bridgeless.
-Device: AVD `pixel6` — Android 15 (SDK 35), 1080x2400, density 420.
+How to get from a cold surface to a logged-in screen, per surface. URLs, ids, and the matrix are in `.claude/domain/wt-shared.md`; credentials in `ref-project/qa-automation-wt-3-0/config/{env}.yaml`. Sources cited as `(src: ref-project/qa-automation-wt-3-0/<path>:<line>)`.
 
-This is the **operational** side: how to actually get logged in on a device, and what bites.
-The product **spec** for Login — rules, error strings, lockout limits, statuses — lives in
-`otc-mobile.md` § Login. Do not duplicate it here.
+Facts that hold everywhere:
 
-A runbook, not a spec index: prose and commands, like `flows.md` — not the one-fact-per-line
-`#tag` format of `otc-mobile.md` / `otc-shared.md`. The atomic facts are mirrored as tags under
-**Quick facts** so they stay greppable; everything else needs its explanation to be usable.
+- Login has **no server picker**. The id alone decides the server; Root Admin "server validation priority" breaks ties when the same id exists on two servers (src: `tests/web/login/test_LGN_TC05_positive_server_priority.py`). A second server's account is attached after login via Manage Account → Link account (below).
+- **No passcode, biometric, or env gate screen exists.** Env is the URL (web) or the installed package (app) (src: `src/page_object/` — no such screen in any tree).
+- Same testid string on every member-site platform: `data-testid` on web, resource-id on Android (unqualified, e.g. `login-submit`, never `com.aquariux…:id/login-submit`), accessibility id on iOS (src: `.claude/docs/platform-conventions.md`).
+- Wrong credentials on any tab: "Invalid credentials, please try again." (src: `src/data/ui_messages.py:9`).
 
-Locators: `.claude/locator-cache.json` → `bfg-otc-app`. Identifiers live under `screens`
-(platform-neutral — an RN `testID` is the same string on all three platforms); Android's
-coordinates and commands sit under `android`. `ios` and `web` are stubs listing what is
-needed to fill them.
+## Member site — desktop
 
-OTP retrieval: `scripts/mailinator_otp.py`.
+1. Open `{base_url}/web`. Landing path is `/login` (src: `web/base_page.py:74`, `src/data/enums/system.py:65`).
+2. Pick the account tab: `tab-login-account-type-live` | `-demo` | `-crm` (div). The selected tab carries class `selected` (src: `web/pages/login_page.py:24,92`).
+3. `login-user-id` (input) — account id, or email on the CRM tab (src: `login_page.py:25`).
+4. `login-password` (input); eye-mask is the sibling div (src: `login_page.py:26-27`).
+5. Optional language: `language-dropdown` (div) → `language-option` whose text is the language name, e.g. `Tiếng Việt` (src: `login_page.py:29-30`).
+6. `login-submit` (button). Wait for the loader to clear (src: `login_page.py:28,70`).
 
-**Platform scope.** The app ships Android + iOS + web from one RN codebase, but only
-**Android** has been walked. The flow, the screen order, the setup steps and the OTP handling
-should hold on iOS and web; the coordinates, `adb`/`pm clear` commands and keyevents will not.
-iOS and web sections are still to be written — see `bfg-otc-app.ios._needed` / `.web._needed`
-for what each requires.
+Also on the page: `login-account-signup` (Sign up), "Open Demo Account" text link. Not on desktop: Forgot password, Remember me (src: `login_page.py:31-32`).
 
-> Everything below is observed on build 0.15.0. Where the live app differs from what
-> `otc-mobile.md` records, it is marked **⚠ DEVIATION**.
+Tabs shown: `Demo` + `Live` by default; **`Demo` + `CRM` when the tenant is lirunex on MT4** (src: `login_page.py:82-86`).
 
----
+## Member site — mobile-web
 
-## Quick facts
+Set viewport **430×932** before the first navigation; the MCP may reset it between calls (src: `src/data/consts.py:38`, `.claude/docs/browser-rule.md`).
 
-Tags: `#device` `#setup` `#creds` `#otp` `#launch` `#gotcha` `#scope`
+1. Open `{base_url}/mobile` (src: `web_app/base_page.py:70`).
+2. Account tab — text, not testid. `Demo` = `//div[text()="Demo"]`; **two `Live` divs exist**: the first is the CRM tab, the last is Live (src: `web_app/pages/login_page.py:42-44`).
+3. Username field testid is **`login-account-type`** (input), not `login-user-id`. Placeholder "Enter your account ID", or "Enter your email / username" on the CRM tab (src: `login_page.py:33,180-186`, `ui_messages.py:12-13`).
+4. `login-password`; reveal `login-password-show-password`, hide `login-password-hide-password` (src: `login_page.py:34-36`).
+5. Optional language: `language-dropdown` (button) → option under `language-dropdown-*` with the language text (src: `login_page.py:40-41`).
+6. `login-submit`.
 
-#device  Boot | `emulator -avd pixel6`, backgrounded | the `mobile` server does NOT boot an AVD
-#device  AVD | use `pixel6` | `pixel7pro` also exists and voids every cached coordinate
-#device  Install | `app-release.apk` at repo root | a fresh/wiped AVD has no app installed
-#setup   Env gate | `aq@aq.com` | one-time per INSTALL | fresh install only | reset: `adb shell pm clear com.bfgto.sit.app`
-#setup   App passcode | `111111` | one-time per DEVICE | first login on that device | entered twice (Create → Confirm)
-#creds   Mobile app account (works on office network) | `MEMBER_APP_BUSINESS` / `SHARED_PASSWORD`
-#otp     Login OTP | 6 digits | sender `aqxotc-sit@s20ip12.com` | subject "BFG OTC Verification Code" | valid 5 min | resend after 60s
-#otp     Fetch | `.venv/bin/python scripts/mailinator_otp.py otp mth2608 --after now --sender aqxotc-sit`
-#launch  Android | `adb shell am start -n com.bfgto.sit.app/com.bfgtoapp.MainActivity` | `monkey` does NOT work (exits -5)
-#gotcha  Splash hangs forever | corrupt okhttp DiskLruCache after unclean shutdown | fix: `pm clear`
-#gotcha  yopmail | all domains + mirrors blocked on office network (80 and 443) | use mailinator or mail.tm
-#gotcha  Button labels | login form CTA is "Log in"; Welcome screen CTA is "Login" | exact-text locators hit the wrong screen
-#scope   Env gate + passcode | install/device setup, NOT login steps | keep out of login TCs
+Extra on mobile-web: `forgot-password-button`, `login-account-signup`, "Open Demo Account" (src: `login_page.py:38-39,45`). CRM sign-up form lives behind Sign up (src: `web_app/pages/crm_signup_page.py:10`).
 
----
+## Native app — Android
 
-## Device bring-up
+Pre-steps:
 
-Cold machine to a running app. This precedes everything below.
+1. Confirm the install matches the matrix point: `adb shell pm list packages | grep aquariux`. Expect exactly one of `com.aquariux.wt.sit.<client>` / `.release.<client>` / `.uat.<client|tinshing>`. Any other package is the wrong build (src: `.claude/docs/appium-rule.md`, `config/*.yaml`).
+2. Launch. Tap `ads-skip-button` when it shows; the app may reload once, so expect up to two skips (src: `android/screens/login_screen.py:36,61`).
+3. If a previous session survived, you land on Home, not Login. Log out first, or relaunch and re-check (src: `.claude/docs/appium-rule.md`).
 
-**The driver attaches to devices; it does not boot them.** Listing devices returns only what is *already*
-connected. Booting is a shell step, and it comes first.
+Fields (resource-ids):
 
-**Use `pixel6`.** Every coordinate in the cache was measured on it at 1080x2400.
-`pixel7pro` exists on this machine and voids all of them.
+| Step | Target | Note |
+|---|---|---|
+| Account tab | content-desc `Demo`; `Live` instance 0 = CRM tab, `Live` instance 1 = Live tab | text-based, same layout as mobile-web (src: `login_screen.py:45-47`) |
+| Username | `login-account-type` (EditText) | (src: `:37`) |
+| Password | `login-password` (EditText); `login-password-show-password` / `-hide-password` | (src: `:38-40`) |
+| Remember me | `login-remember-me-unchecked` ↔ `login-remember-me-checked` — the id flips with state | (src: `:52-53`) |
+| Language | `language-dropdown` → scroll to content-desc = language name | (src: `:42-43`) |
+| Submit | `login-submit` | (src: `:41`) |
+| Also present | `forgot-password-button`, `login-account-signup`, "Open Demo Account", footer `© {Client} {year}. All rights reserved` | (src: `:48-51,253-255`) |
 
-```bash
-# 1. boot — run this in the background; the emulator process never returns
-emulator -avd pixel6
+⚠ unverified — Android Live→CRM remap: the Android tree maps "Live" to the **first** `Live` element (the CRM tab) for every client except lirunex; iOS and mobile-web always take the last `Live`. The trees disagree, so which element a non-lirunex Android build calls "Live" must be confirmed on the device (src: `android/screens/login_screen.py:147-148` vs `ios/screens/login_screen.py:165-169`).
 
-# 2. wait for it — `am start` or any driver call against a booting device fails "device offline".
-#    The sleep runs inside the device shell, so it does not block the host.
-adb wait-for-device shell 'while [ -z "$(getprop sys.boot_completed)" ]; do sleep 1; done'
-```
+After login, Home may show a feature announcement: tap `feature-announcement-modal-got-it-button` until it stops appearing (src: `android/screens/home_screen.py:34,57`).
 
-Then, over the driver:
+## Native app — iOS
 
-1. **List devices** — take the id (`emulator-5554` with one emulator up). Every call that acts on a device
-   needs it.
-2. **List installed apps** — is `APP_PACKAGE` there? A fresh or wiped AVD does not have it.
-3. Absent → **install** `app-release.apk` from the repo root (build 0.15.0).
-4. **Launch** it. Pass `locale` wherever a TC asserts on visible text.
+Pre-steps: `xcrun simctl listapps <udid> | grep -i aquariux` for the bundle; same ads skip (`ads-skip-button`) and session caveat as Android (src: `ios/screens/login_screen.py:32,57`).
 
-A **fresh install lands on the env gate**, not Welcome — the one-time setup steps below apply.
-Raw `adb` remains the fallback and is what the walkthrough below is written in; the launch
-command is `android.launch` in the cache, and `monkey` does not work.
+Fields (accessibility ids unless noted):
 
----
+| Step | Target | Note |
+|---|---|---|
+| Account tab | `Demo`; `Live` — **last** `XCUIElementTypeOther[name == "Live"]` is Live, the first is CRM | (src: `ios/screens/login_screen.py:41-43`) |
+| Username | TextField `name == "login-account-type"` | XCUITest also reports a container with the same name — target the text field (src: `:33`, `.claude/docs/appium-rule.md`) |
+| Password | `login-password`; `login-password-show-password` / `-hide-password` | (src: `:34-36`) |
+| Remember me | `login-remember-me-unchecked` ↔ `login-remember-me-checked` | (src: `:48-49`) |
+| Language | Button `language-dropdown` → option = language name | (src: `:38-39`) |
+| Submit | `login-submit` | (src: `:37`) |
+| Also present | `forgot-password-button`, `login-account-signup`, "Open Demo Account", footer "All rights reserved" | (src: `:44-47`) |
 
-## The flow
+Got-it modal after login: `feature-announcement-modal-got-it-button` (src: `ios/screens/home_screen.py:55`).
 
-```
-install → launch → Splash (Bond Financial Group)
-  → [SETUP, fresh install only]  Env gate: aq@aq.com → Login
-  → Welcome: Login | Sign Up
-  → Login form: email + password → Log in
-  → Verify your identity: 6-digit email OTP
-  → [SETUP, first login per device]  Create passcode 111111 → Confirm 111111
-  → Home
-```
+## CRM login — email + OTP
 
-Steps marked `[SETUP]` are one-time. The recurring login path is just:
+Applies only to the CRM tab, so only to lirunex.
 
-```
-launch → Splash → Welcome → Login form → OTP → Home
-```
+1. Username is an **email**, password is the CRM password (`password_crm` in the yaml) (src: `src/data/data_runtime.py:83-85`).
+2. Submit. A wrong password stops here with the invalid-credentials error and **no OTP is sent** (src: `tests/web_app/login/crm_login/test_LGN_CRM_TC09*`).
+3. OTP screen: title "Enter Code", "Please enter the 6-digits code we sent to your email." (src: `ui_messages.py:37-38`).
+   - Web: six `input[maxlength='1']` boxes; submit `sign-up-verification-button`; resend `sign-up-resend-verification`; timer is the span after it; back `otp-back-to-login-button` (src: `web/pages/crm_otp_page.py:24-29`).
+   - App: one field `sign-up-verification-pin`, same submit and resend ids (src: `ios/screens/crm_otp_screen.py:24-27`, `android/screens/crm_otp_screen.py:24-27`).
+4. Read the 6-digit code from the account's inbox. Test inbox: `mt4@sharklasers.com` (Guerrilla Mail) (src: `src/data/consts.py:193`).
+5. Enter the digits and submit.
 
-Two steps are **one-time setup**, not part of the per-login path. Neither reappears on a
-normal login, so do not build them into login TCs — they belong to install/device setup.
-
-| Setup step | Value | Scope | When it appears | How to get it back |
-|---|---|---|---|---|
-| Env gate | `aq@aq.com` | per **install** | fresh install only | `adb shell pm clear com.bfgto.sit.app` |
-| Create passcode | `111111` | per **device** | first login on that device | log in as a different account, or `pm clear` |
-
-- **Env gate — `aq@aq.com`, fresh install only.** A SIT environment unlock, entered once. It
-  survives logout and re-login; reinstalling over the top does not bring it back, only clearing
-  app data does.
-- **Create passcode — `111111`, per device.** Use `111111` on every device unless a test says
-  otherwise. Asked once, on the first login on that device, and confirmed twice
-  (`Create passcode` → `Confirm your passcode`). It is device-local — a second device, or a
-  cleared one, asks again and gets `111111` again. Logging in as a *different* account on the
-  same device also re-triggers it (see `otc-mobile.md` `#rule Account switch on device`).
-
-Logout returns to **Welcome** — past the env gate, and with the passcode still enrolled.
-
----
-
-## Deviations from `otc-mobile.md` § Login
-
-- **⚠ DEVIATION — env gate is undocumented.** `#flow Login` records
-  `Splash → Biometric/Passcode unlock OR Email+Password → Home`. It has no env gate. The gate
-  is a SIT build artefact, not product behaviour, and is worth keeping out of TCs.
-- **⚠ DEVIATION — login sends an email OTP.** `#scope Login — out of scope (phase 1)` lists
-  "OTP login" as out of scope, but 0.15.0 requires a 6-digit email OTP on every
-  email+password login. Confirm with the team whether the spec or the build is behind.
-- **⚠ DEVIATION — button label.** `#screen Login` says CTA `Login`. The actual login-form
-  button reads **`Log in`** (two words). `Login` is the *Welcome* screen's button. Both exist,
-  one screen apart — an exact-text locator will hit the wrong one.
-- **No biometric prompt** on this emulator (no enrolled biometric). Passcode is the only
-  local unlock path here.
-
----
-
-## Driving it over adb
-
-`adb -s emulator-5554`. Launch explicitly — `monkey` fails to start this package:
-
-```bash
-adb shell am start -n com.bfgto.sit.app/com.bfgtoapp.MainActivity
-```
-
-Read the screen. uiautomator surfaces a testID as `resource-id` with no package prefix:
-
-```bash
-adb shell uiautomator dump /sdcard/ui.xml && adb shell cat /sdcard/ui.xml
-```
-
-Typing: `input text` handles `@` and `!` unescaped, so `Te5t1ng!` goes in as-is (quote it in
-the shell). After each field, `input keyevent KEYCODE_BACK` dismisses the keyboard.
-
-### Getting the OTP
-
-Mailinator public inboxes need no key. **Take the cutoff before triggering the mail** — the
-inbox keeps old codes and you will otherwise submit a stale one:
-
-```bash
-CUTOFF=$(python3 -c "import time;print(int(time.time()*1000))")
-# ...tap Log in...
-.venv/bin/python scripts/mailinator_otp.py otp mth2608 --after "$CUTOFF" --sender aqxotc-sit
-```
-
-Sender is `aqxotc-sit@s20ip12.com`, subject `BFG OTC Verification Code`, **valid 5 minutes**.
-Resend is locked behind a 60s countdown.
-
-`--after "$CUTOFF"` is not optional. The inbox carries several subjects — a bank-account OTP arrives as
-`Verify Your Request to Add a Bank Account` — so `--sender` alone still returns a stale code. Without the
-cutoff, `otp` returned two stale codes on 2026-08-27 and cost 193s.
-
-Entering it: the six `otp-cell-{n}` nodes are **not clickable**. Tap cell 0 to focus the hidden
-input, then send all six digits in one `input text` — they auto-advance and the screen
-self-submits on the sixth. Count the filled cells afterwards — but **zero cells means the screen
-advanced**, not that entry failed: a correct code leaves nothing to count. Test for the advance, or
-the error text, before calling it a failure. Five cells means a freshly focused field dropped the
-leading digit (2026-08-27) — clear with `keyevent 67` and send digit-by-digit.
-
----
-
-## Things that will waste your afternoon
-
-- **`monkey` cannot launch this app.** It exits `-5` with no error. Use `am start` with
-  `com.bfgto.sit.app/com.bfgtoapp.MainActivity`.
-- **Splash hangs forever after an unclean shutdown.** Symptom: orange Bond Financial Group
-  splash, minutes, no crash in logcat. Cause is a corrupt okhttp cache —
-  `W okhttp.OkHttpClient: DiskLruCache /data/.../files/okhttp is corrupt`. Fix:
-  `adb shell pm clear com.bfgto.sit.app`. Costs you the env gate and the passcode, not the account.
-- **yopmail is blocked on the office network.** Every domain and mirror times out on both 80
-  and 443; it is not a sandbox or DNS problem. Use mailinator. `scripts/mailtm_otp.py` (mail.tm)
-  is the other option.
-- **The emulator can die on app launch.** The qemu process itself exits, so adb reports no
-  devices rather than an offline one. Check with `pgrep -fl qemu` before debugging adb;
-  reboot with `emulator -avd pixel6`.
-- **`desc=Log out` matches two nodes** once the confirm sheet is open — the menu row and the
-  sheet button. Disambiguate by y.
-- **An `EditText`'s `text` is the placeholder while empty**, the typed value once filled. To
-  clear a field: tap it, `KEYCODE_MOVE_END`, then N × `KEYCODE_DEL`.
-
----
-
-## Test account used
-
-The working account on this build:
-
-| Field | Value |
+| Behaviour | Expected |
 |---|---|
-| Email | `MEMBER_APP_BUSINESS` |
-| Password | `SHARED_PASSWORD` |
-| App passcode | `111111` — the standing default, set per device |
-| Display name | bun bo — "Personal account" |
-| Balance | $0.00, Everyday account, 4 currencies, no transactions |
+| Resend timer | starts at `02:00`; Resend disabled until it hits zero (src: `crm_otp_page.py:156`, `test_LGN_CRM_TC01*`) |
+| Resend inside cooldown | "An OTP was recently sent to you. Please try again after 2 minutes." (120 s) (src: `ui_messages.py:32`, `consts.py:25`) |
+| Code age | expires after 300 s → "Your OTP is expired." (src: `consts.py:26`, `ui_messages.py:34`) |
+| Wrong code | "The code you entered is incorrect, please try again." (src: `ui_messages.py:30`) |
+| New code requested | previous code is invalid; a used code cannot be reused (src: `test_LGN_CRM_TC05*`, `test_LGN_CRM_TC08*`) |
+| Non-numeric input | rejected (src: `test_LGN_CRM_TC07*`) |
 
-The passcode is not an account credential — it is enrolled per device, so a new or cleared
-device asks for it again. Set it to `111111` every time.
+Precondition for the "new OTP invalidates previous" and "used OTP" cases: Root Admin logout URL set to empty, restored afterwards (src: `tests/web_app/login/crm_login/test_LGN_CRM_TC05*`, `test_LGN_CRM_TC08*`).
+
+## Back Office
+
+1. Open `{client}.back_office.url` from the yaml. The UI path after the host is `<not in source>` (only the API base `/api/admin` is recorded) (src: `src/api/webtrader/back_office/auth.py:21`).
+2. Username from the yaml `userid` list (comma-separated pool; any one works), BO password (src: `auth.py:37`).
+3. Captcha: on any `sit` env (sit, release_sit) the code **`123`** is accepted. On uat it is a real image captcha — read it by eye; refresh if unreadable (src: `auth.py:44`, `data_runtime.py:161-162`).
+4. Sign in. Sessions expire; the automation re-logs in on a failed session check, so expect to re-login mid-task (src: `auth.py:61`).
+
+Not on prod. Every BO write changes the client for everyone — note the old value, restore it (src: `.claude/docs/fixture-conventions.md`).
+
+## Root Admin
+
+1. Open `root_admin.url` (global; on SIT it ends in `/root`) (src: `config/sit.yaml:7`).
+2. No testids. Username = input under label `Username`; password = `input[type=password]`; captcha field = the input whose sibling holds the `<img>`; "new code" link = anchor `Anchor-root`; submit = `button[type=submit]` (src: `src/page_object/root_admin/pages/login_page.py:16-21`).
+3. Captcha `123` on sit envs; real image on uat. A login error shows as a `Notification-root` toast — refresh the code and retry (src: `login_page.py:22,45-48`, `root_admin/auth.py:33-66`).
+4. Users: `automation`, `automation2`, `automation3` on SIT (src: `config/sit.yaml:8`).
+
+Root Admin edits a whole company object at once. Feature and language saves are **destructive — anything left unticked is disabled** (src: `src/api/webtrader/root_admin/company.py:238,274`). Details in `.claude/domain/wt-admin.md`.
+
+## Attaching a second account — Manage Account → Link account
+
+Mobile-web and app: Menu → Account → Manage Account (`/menu/manage-account`). Desktop: Settings dropdown → linked accounts (src: `src/data/enums/system.py:80`, `tests/web/trade/settings/test_TRD_SET_TC0{5,6,7,8}*`).
+
+1. `manage-account-link-account` (button) (src: `web_app/components/account/manage_account.py:27`).
+2. `link-account-form-account-id`, `link-account-form-password` (the linked account's own password), `link-account-form-confirm` (src: `web_app/components/modals/link_account.py:21-27`).
+3. Success: "Account linked successfully." on 3.0 mobile ⚠ unverified on web 3.0 — source says "todo: recheck on web 3.0"; older copy is "You have linked your account successfully.\nAccount ID: %s" (src: `ui_messages.py:49-56`).
+4. Empty fields: "Account ID is required." / "Password is required."; already linked: "Account already linked" (src: `ui_messages.py:52,64-65`).
+5. Switch: tap the linked account → confirm `link-account-modal-ok-button`; "Switch account?\nThis will end your current session…" then "Account switched successfully." Remove: `manage-account-edit` → `manage-account-delete` → confirm (src: `link_account.py:37-40`, `manage_account.py:26-30`, `ui_messages.py:60-62`).
+6. Some flows ask the password again: `re-enter-password-form-password` → `re-enter-password-form-confirm` (src: `link_account.py:47-48`).
+
+Cross-server linking (mt4 account onto an mt5 login) works only on multi-OMS tenants (lirunex, centroid) and not from a CRM login (src: `tests/web_app/menu/manage_account/test_MNU_MGA_TC04*:12`). Linked-account rows read `ID: x (USD | 1:leverage)`; Centroid rows read `ID: x` only (src: `src/data/objects/account_info.py:249`).
+
+## Confirming build and env
+
+| Check | How |
+|---|---|
+| Web env + client | URL host: `{client}-mb.webtrader-{env}.s20ip12.com`; prod is `webtrader.lirunex.com`. TinShing host = centroid on UAT (src: `config/*.yaml`) |
+| Web layout | `/web` = desktop; `/mobile` = phone layout. Wrong path → wrong UI |
+| App env + client | package name (`adb shell pm list packages` / `xcrun simctl listapps`): `.sit.`, `.release.`, `.uat.` segment + client (src: `.claude/docs/appium-rule.md`) |
+| App client on screen | login footer `© {Client} {year}. All rights reserved` (src: `ui_messages.py:17`, `android/screens/login_screen.py:253-255`) |
+| Account type after login | Home / Trade badge: LIVE, DEMO; CRM shows LIVE (src: `web_app/pages/home_page.py:150`) |
+| Server after login | account-info label `TS4` / `TS5` / `Centroid` (src: `src/data/enums/system.py:43`) |
+
+## Fast checks
+
+| Symptom | Likely cause |
+|---|---|
+| Feature or menu item missing on the app | wrong build for the env — check the package name first |
+| Feature missing on web | wrong client URL or client legitimately lacks it (Stop Limit, CRM, quoteboard…) — see `wt-shared.md` tables |
+| Manage Funds / Open Demo Account not in Menu | logged in on a demo account (src: `src/data/enums/ui.py:360,374`) |
+| Only Demo + CRM tabs, no Live | lirunex on MT4 — expected (src: `web/pages/login_page.py:85`) |
+| Two "Live" tabs when scanning the DOM/tree | first is CRM, last is Live — expected on mobile-web and app |
+| Cannot place an order after login; symbols grey | market closed for that symbol; check trading hours and server timezone |
+| No notification arrives | demo account — no notifications by design |
+| OTP never arrives | wrong password (OTP is not sent), or inside the 120 s cooldown from a previous request |
+| OTP rejected as expired | more than 300 s since it was sent |
+| BO / Root Admin captcha keeps failing | not on a sit env — `123` only works there; read the image |
+| Landed on Home instead of Login on the app | previous session persisted — log out, or relaunch after clearing app data |
+| Desktop layout at phone size | viewport not set to 430×932 before navigation |
+| Link account says "Account already linked" | that id is already in the linked list — remove it first |
+| Cross-server link fails | non-OMS tenant (transactCloud) or a CRM login — not supported |
