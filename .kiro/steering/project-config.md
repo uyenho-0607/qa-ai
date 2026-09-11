@@ -29,6 +29,8 @@ Role capabilities: `.kiro/domain/otc-bo.md` § Roles & Permissions.
 
 API credentials (`JIRA_EMAIL`, `JIRA_API`, `GOOGLE_*`) live in `.env` at the repo root
 
+Jira cloudId, site, subtask type ids, transitions: `.kiro/steering/jira.md`. Read it before any Jira action.
+
 A row still reading `<FILL_IN>` when a skill needs it → ask the user for the value. Never substitute a plausible one.
 
 ## Platforms
